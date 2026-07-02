@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Manual HLL</title>
+
+<!-- Sitio = este archivo + la carpeta "media/". Clips e imágenes van marcados con <!-- CLIP --> y <!-- IMG -->. Íconos de rol en media/icons/. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#14150f; --surface:#1c1e14; --surface-2:#24261a; --line:#4a4e33;
+  --tan:#d3cbb0; --tan-dim:#948d74; --amber:#d98a2b; --amber-hi:#f0a63e;
+  --red:#b0402c; --green-op:#7d8a4a; --stamp:rgba(211,203,176,.055);
+
+  /* colores por tipo de rol */
+  --cmd:#f0a63e;  /* comandancia */
+  --sup:#96a652;  /* soporte */
+  --cho:#c65a3c;  /* choque */
+
+  --f-display:"Saira Condensed",system-ui,sans-serif;
+  --f-body:"Saira",system-ui,sans-serif;
+  --f-mono:"Space Mono",ui-monospace,monospace;
+  --f-type:"Special Elite",var(--f-mono);
+  --sidebar:272px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tan);font-family:var(--f-body);font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle at 20% 10%,rgba(217,138,43,.05),transparent 40%),radial-gradient(circle at 85% 90%,rgba(125,138,74,.05),transparent 45%)}
+a{color:var(--amber);text-decoration:none}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
+.shell{display:flex;min-height:100vh;position:relative;z-index:1}
+
+/* Sidebar */
+.side{width:var(--sidebar);flex:0 0 var(--sidebar);position:sticky;top:0;align-self:flex-start;height:100vh;border-right:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg));padding:24px 20px;display:flex;flex-direction:column;gap:24px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand .mark{width:46px;height:46px;flex:0 0 46px;border-radius:50%;border:2px solid var(--amber);overflow:hidden;background:#0e0f0a}
+.brand .mark img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+.brand .who small{font-family:var(--f-type);font-size:10px;letter-spacing:.18em;color:var(--tan-dim);display:block}
+.brand .who strong{font-family:var(--f-display);font-weight:700;letter-spacing:.05em;font-size:20px;color:var(--tan)}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:2px}
+.nav a{display:flex;align-items:baseline;gap:12px;padding:9px 10px;color:var(--tan-dim);border-left:2px solid transparent;font-family:var(--f-display);font-weight:500;letter-spacing:.05em;text-transform:uppercase;font-size:14px;transition:.18s}
+.nav a .ord{font-family:var(--f-mono);font-size:11px;color:var(--line)}
+.nav a:hover{color:var(--tan);background:var(--surface-2)}
+.nav a.active{color:var(--amber-hi);border-left-color:var(--amber);background:var(--surface-2)}
+.nav a.active .ord{color:var(--amber)}
+.side .foot{margin-top:auto;font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;line-height:1.7}
+
+/* Main */
+.main{flex:1 1 auto;min-width:0;max-width:940px;padding:0 clamp(20px,5vw,64px)}
+
+/* Hero */
+.hero{padding:88px 0 60px;border-bottom:1px solid var(--line)}
+.hero .eyebrow{font-family:var(--f-type);font-size:12px;letter-spacing:.2em;color:var(--amber);text-transform:uppercase}
+.hero h1{font-size:clamp(48px,8vw,94px);font-weight:700;text-transform:uppercase;letter-spacing:-.005em;margin:14px 0 0}
+.hero h1 span{display:block;color:var(--amber)}
+.hero .lede{max-width:56ch;margin-top:22px;color:var(--tan);font-size:19px}
+.hero .doctrine{margin-top:30px;padding:16px 20px;border-left:3px solid var(--amber);background:var(--surface);font-family:var(--f-display);font-weight:500;font-size:20px;letter-spacing:.01em}
+
+/* Section */
+.sec{padding:70px 0;border-bottom:1px solid var(--line);position:relative}
+.sec>.ord-stamp{position:absolute;right:-6px;top:38px;font-family:var(--f-type);font-size:120px;color:var(--stamp);pointer-events:none;user-select:none;z-index:0}
+.sec-head{position:relative;z-index:1;margin-bottom:8px}
+.sec-head .tag{font-family:var(--f-type);font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase}
+.sec-head h2{font-size:clamp(34px,5.5vw,54px);text-transform:uppercase;font-weight:700;margin-top:8px}
+.sec-head .sub{color:var(--tan-dim);margin-top:10px;max-width:62ch}
+.sec-body{position:relative;z-index:1}
+.sec-body p{max-width:66ch}
+
+/* Tipos de rol */
+.rtype{margin:36px 0}
+.rtype-head{display:flex;align-items:center;gap:12px;margin-bottom:2px;padding-bottom:10px;border-bottom:2px solid var(--c)}
+.rtype-head .sq{width:13px;height:13px;background:var(--c);flex:0 0 13px}
+.rtype-head h3{font-size:22px;text-transform:uppercase;letter-spacing:.09em;color:var(--c)}
+.rtype-head .n{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--tan-dim);letter-spacing:.1em}
+
+/* Fila de rol: ícono + texto */
+.rrow{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid rgba(74,78,51,.45)}
+.rrow .ic{width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;opacity:.95}
+.rrow .ic img{width:100%;height:100%;object-fit:contain;display:block}
+.rrow .rc{min-width:0}
+.rrow .rc h4{font-family:var(--f-display);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin:0 0 3px}
+.rrow .rc h4 .flag{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;color:var(--c);margin-left:10px;vertical-align:middle}
+.rrow .rc p{margin:.3em 0;max-width:64ch}
+
+/* Referencia por tipo (espacio reservado) */
+.ref{border:1px dashed var(--c);background:var(--surface);padding:14px 16px;margin:16px 0 0;display:flex;gap:14px;align-items:center}
+.ref .tagx{font-family:var(--f-type);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--c);flex:0 0 auto}
+.ref p{margin:0;font-family:var(--f-mono);font-size:12.5px;color:var(--tan-dim);letter-spacing:.02em}
+
+/* Callouts */
+.call{border-left:3px solid var(--amber);background:var(--surface);padding:14px 18px;margin:20px 0;max-width:66ch}
+.call.warn{border-left-color:var(--red)}
+.call.core{border-left-color:var(--green-op);background:var(--surface-2)}
+.call .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:4px}
+.call.warn .k{color:var(--red)} .call.core .k{color:var(--green-op)}
+.call p{margin:0;max-width:none}
+
+/* Media */
+.fig{margin:22px 0;border:1px solid var(--line);background:#0e0f0a;max-width:720px}
+.fig .frame{position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--surface)}
+.fig .frame video,.fig .frame img{width:100%;height:100%;object-fit:cover;display:block}
+.fig .placeholder{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:8px;color:var(--tan-dim);font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;background:repeating-linear-gradient(45deg,transparent 0 14px,rgba(74,78,51,.14) 14px 15px)}
+.fig .placeholder .big{font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--tan);text-transform:uppercase}
+.fig .cap{display:flex;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);letter-spacing:.03em}
+.fig .cap b{color:var(--amber);font-weight:700}
+
+/* Tabla */
+.readout{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;max-width:none}
+.readout caption{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);text-align:left;padding-bottom:10px}
+.readout th,.readout td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+.readout thead th{background:var(--surface-2);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;font-weight:600;color:var(--tan)}
+.readout tbody th{font-family:var(--f-display);font-weight:600;background:var(--surface)}
+.readout td small{font-family:var(--f-mono);color:var(--tan-dim);font-size:11px}
+.zone-blue{color:#8fb0d6} .zone-red{color:#d68a8a}
+
+/* Reglas */
+.rule-block{border:1px solid var(--line);background:var(--surface);padding:20px 22px;margin:20px 0}
+.rule-block h3{font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin-bottom:4px}
+.rule-block .fmt{font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);letter-spacing:.05em;margin-bottom:12px}
+.rule-block p{margin:.5em 0}
+.rule-block.pending{border-style:dashed;opacity:.85}
+.rule-block.pending .fmt{color:var(--amber)}
+.src{font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);margin-top:6px}
+
+/* Reveal */
+.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* Mobile */
+.side .toggle{display:none}
+@media (max-width:900px){
+  .shell{flex-direction:column}
+  .side{width:100%;height:auto;position:sticky;top:0;z-index:20;flex-direction:row;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;border-right:none;border-bottom:1px solid var(--line)}
+  .side .brand{flex:1}
+  .nav{position:absolute;top:100%;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--line);padding:8px 12px 14px;display:none}
+  .nav.open{display:flex}
+  .side .foot{display:none}
+  .side .toggle{display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);color:var(--tan);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:8px 12px;cursor:pointer}
+  .main{max-width:100%}
+  .hero{padding:48px 0 40px}
+  .sec>.ord-stamp{font-size:82px;top:18px}
+  .ref{flex-direction:column;align-items:flex-start;gap:6px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}}
+</style>
+</head>
+
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="brand">
+      <div class="mark"><img src="media/logo.jpg" alt="Uranium 235"></div>
+      <div class="who"><small>HELL LET LOOSE</small><strong>URANIUM 235</strong></div>
+    </div>
+    <nav class="nav" id="nav">
+      <a href="#roles"><span class="ord">00</span> Roles</a>
+      <a href="#comunicacion"><span class="ord">01</span> Comunicación</a>
+      <a href="#proactividad"><span class="ord">02</span> Proactividad</a>
+      <a href="#datos"><span class="ord">03</span> Datos duros</a>
+      <a href="#infanteria"><span class="ord">04</span> Gameplay Infantería</a>
+      <a href="#tanquista"><span class="ord">05</span> Gameplay Tanquista</a>
+      <a href="#reglas"><span class="ord">06</span> Reglas</a>
+    </nav>
+    <button class="toggle" id="toggle">MENÚ ▾</button>
+    <div class="foot">DOC. INTERNO<br>v0.3 · BORRADOR</div>
+  </aside>
+
+  <main class="main">
+
+    <header class="hero reveal">
+      <p class="eyebrow">Briefing · Leer antes de entrar</p>
+      <h1>Ganar es<br><span>trabajar juntos</span></h1>
+      <p class="lede">La base táctica del clan, ordenada como recorrido. No es un dogma: es lo que nos funciona. Está sujeto a cambios y a lo que aporte cada uno.</p>
+      <div class="doctrine">"La información bien transmitida y ser consciente de lo que estás haciendo es lo que necesitamos para ganar."</div>
+    </header>
+
+    <!-- ==================== 00 · ROLES ==================== -->
+    <section class="sec" id="roles">
+      <div class="ord-stamp">00</div>
+      <div class="sec-head reveal">
+        <p class="tag">00 · Roles</p>
+        <h2>No se negocian</h2>
+        <p class="sub">Divididos por tipo. Cada rol con su ícono; el color marca a qué familia pertenece: comandancia, soporte o choque.</p>
+      </div>
+
+      <div class="sec-body">
+
+        <!-- ---------- COMANDANCIA ---------- -->
+        <div class="rtype" style="--c:var(--cmd)">
+          <div class="rtype-head"><span class="sq"></span><h3>Comandancia</h3><span class="n">dirige · ve el tablero</span></div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/commander.png" alt="Comandante"></div>
+            <div class="rc">
+              <h4>Comandante <span class="flag">◆ rol clave</span></h4>
+              <p>Ve el tablero completo. Reparte recursos, tira supply drops y bombardeos, refuerza puntos, spawnea tanques y camiones de supply, y coloca garrisons. No dispara la partida con el arma: la dispara con las decisiones.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/officer.png" alt="Oficial"></div>
+            <div class="rc">
+              <h4>Oficial</h4>
+              <p>Lidera la escuadra. Con el reloj coloca OPs y garrisons, y tiene voz directa con comando, otras escuadras y armor. Sos el comando de tu escuadra: marcás, ordenás y sostenés los spawns.</p>
+            </div>
+          </div>
+
+          <!-- REFERENCIA: dejá acá una imagen/diagrama de OPs, garrisons y supply drops -->
+          <div class="ref"><span class="tagx">Referencia →</span><p>OP y garrison · supply drops · reservado para imagen/diagrama</p></div>
+        </div>
+
+        <!-- ---------- SOPORTE ---------- -->
+        <div class="rtype" style="--c:var(--sup)">
+          <div class="rtype-head"><span class="sq"></span><h3>Soporte</h3><span class="n">sostiene · construye</span></div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/support.png" alt="Soporte"></div>
+            <div class="rc">
+              <h4>Soporte</h4>
+              <p>Suma la caja de munición <b>explosiva</b> (repone cohetes del AT y granadas del Asalto), la caja liviana (balas) y 50 supplies (garrisons y cañón AT). Lo primero que construye es un nodo de <b>manpower</b>: le baja el cooldown para tirar supplies más seguido.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/engineer.png" alt="Ingeniero"></div>
+            <div class="rc">
+              <h4>Ingeniero</h4>
+              <p>Minas AP como prioridad: puertas, trincheras, tránsito. Minas AT: caminos y puntos de choque de vehículos. Máximo 6 —la séptima reemplaza la primera—, así que reposicionalas al avanzar. Con satchels revienta nodos y garrisons profundos.</p>
+            </div>
+          </div>
+
+          <!-- REFERENCIA: dejá acá imágenes de supplies, minas/estructuras y satchels -->
+          <div class="ref"><span class="tagx">Referencia →</span><p>supplies · minas y estructuras · satchels · reservado para imagen/diagrama</p></div>
+        </div>
+
+        <!-- ---------- CHOQUE ---------- -->
+        <div class="rtype" style="--c:var(--cho)">
+          <div class="rtype-head"><span class="sq"></span><h3>Choque</h3><span class="n">rompe · presiona</span></div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/assault.png" alt="Asalto"></div>
+            <div class="rc">
+              <h4>Asalto</h4>
+              <p>STG 44, fuego automático sostenido y superioridad de fuego. En puro edificio (CQB) es de lo más ventajoso: entrás, resolvés el cuarto y avanzás.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/auto_rifleman.png" alt="Fusilero automático"></div>
+            <div class="rc">
+              <h4>Fusilero automático</h4>
+              <p>Rifle automático para fuego de apoyo sostenido a nivel escuadra: cubre avances y fija la cabeza del enemigo mientras el resto se mueve.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/mg.png" alt="Ametrallador"></div>
+            <div class="rc">
+              <h4>Ametrallador (MG42)</h4>
+              <p>Supresión pura. Regla de oro: no se queda fijo. Tira, mata algunos o suprime las salidas, y <b>rota</b>. No puede apuntar con miras sin desplegar el bípode (cuerpo a tierra o sobre una superficie), por eso la posición lo es todo. Después del segundo muerto ya saben dónde estás.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/rifleman.png" alt="Fusilero"></div>
+            <div class="rc">
+              <h4>Fusilero</h4>
+              <p>La clase base. Buena para aprender a moverse, y con un detalle útil: tira cajas de munición al piso para reponer a la escuadra.</p>
+            </div>
+          </div>
+
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/antitank.png" alt="Anti tanque"></div>
+            <div class="rc">
+              <h4>Anti tanque</h4>
+              <p>Ofensivo: busca los blindados, no los espera, siempre con ventaja al flanco o retaguardia. No siempre conviene disparar apenas ves un tanque —dejarlo acercar te da mejor ángulo y de cerca corrés más rápido de lo que gira la torreta—. Al pesado <b>nunca de frente</b>; y si no escuchás el sonido de impacto, tu cohete no hizo daño. <b>Gastá la munición.</b></p>
+            </div>
+          </div>
+
+          <!-- REFERENCIA: dejá acá imágenes de cohetes AT, supresión y armas automáticas -->
+          <div class="ref"><span class="tagx">Referencia →</span><p>cohetes anti-tanque · supresión · armas automáticas · reservado para imagen/diagrama</p></div>
+        </div>
+
+        <div class="call core">
+          <span class="k">El núcleo del ataque</span>
+          <p>AT + Ingeniero pegados a un Soporte. Esa caja explosiva es, literalmente, lo que le permite a un solo antitanque reventar un pesado recargando munición especial. Sin Soporte pegado, el AT queda de adorno con 2 cohetes y el Ingeniero pone unas pocas minas y chau.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==================== 01 · COMUNICACIÓN ==================== -->
+    <section class="sec" id="comunicacion">
+      <div class="ord-stamp">01</div>
+      <div class="sec-head reveal">
+        <p class="tag">01 · Comunicación</p>
+        <h2>El equipo informado resuelve</h2>
+        <p class="sub">Es lo que más peso tiene, porque como oficial dependo de que me llegue la info a tiempo.</p>
+      </div>
+      <div class="sec-body">
+        <p>Si ves infantería filtrándose —por ejemplo metiéndose por el sur— avisá al toque a tu oficial o al que tengas al lado. Una marca en el mapa + "se meten por el sur" a tiempo <b>salva el punto</b>.</p>
+        <div class="call">
+          <span class="k">Dato clave de marcas</span>
+          <p>El líder de escuadra ve <b>todas</b> las marcas del mapa, pero tu escuadra solo ve las que él coloca. Marcar no es opcional: si no lo pasás a la marca, para tu escuadra no existe.</p>
+        </div>
+        <!-- CLIP: marcar una filtración + verse en el mapa -->
+        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — marcar filtración</span><span>media/marca-filtracion.webm · loop</span></div></div><figcaption class="cap"><b>FIG 01.1</b> Marca + voz, a tiempo.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- ==================== 02 · PROACTIVIDAD ==================== -->
+    <section class="sec" id="proactividad">
+      <div class="ord-stamp">02</div>
+      <div class="sec-head reveal">
+        <p class="tag">02 · Proactividad</p>
+        <h2>No dependas de que te den nada</h2>
+        <p class="sub">Esto separa la buena partida de la mala.</p>
+      </div>
+      <div class="sec-body">
+        <p>El Soporte no espera que le pidan: cada vez que vuelve de morir, tira caja donde haga falta. Abrí el mapa cada 5–10–15 segundos, todo el tiempo —hábito número uno—: ahí ves marcas de enemigos, OPs propios cayendo y filtraciones.</p>
+        <p>Cubrí edificios y rotá adentro; no se amontonen todos en una pieza porque un misil los borra juntos. Si caen los OPs de tus oficiales, el que pueda los repone, aunque sea una cuadra más atrás.</p>
+        <div class="call"><span class="k">Regla de OPs</span><p>Un OP mal puesto es mil veces mejor que no tener ninguno. Si no, roten al garry o al OP que quede mejor posicionado.</p></div>
+        <p>Marcá garrys y OPs <b>enemigos</b>: si ves que viene X cantidad de gente una y otra vez, asumí y comunicá que hay un spawn. Si confirmás que es OP y tenés la posibilidad, aseguralo con granada.</p>
+        <!-- IMG: strat sketch de red de spawns bien espaciada vs amontonada -->
+        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — red de spawns</span><span>media/red-spawns.jpg</span></div></div><figcaption class="cap"><b>FIG 02.1</b> Repartir la red, no amontonar.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- ==================== 03 · DATOS DUROS ==================== -->
+    <section class="sec" id="datos">
+      <div class="ord-stamp">03</div>
+      <div class="sec-head reveal">
+        <p class="tag">03 · Datos duros</p>
+        <h2>Lo que no se discute</h2>
+        <p class="sub">Números y mecánicas para tener siempre en la cabeza.</p>
+      </div>
+      <div class="sec-body">
+        <div class="call"><span class="k">El ~90%</span><p>Ganar en HLL es matar garrisons enemigos. Si te revientan siempre desde el mismo lado, no es el aim: hay una garry u OP cerca. Mandamos 2–3 a buscarlo.</p></div>
+        <table class="readout">
+          <caption>Alertas del mapa por proximidad</caption>
+          <thead><tr><th>Zona</th><th>Alerta visual (exclamación)</th><th>Bloqueo absoluto (spawn desactivado)</th></tr></thead>
+          <tbody>
+            <tr><th class="zone-blue">Azul (aliada)</th><td>Enemigo a menos de <b>50 m</b></td><td>Enemigo a menos de <b>15 m</b></td></tr>
+            <tr><th class="zone-red">Roja (enemiga)</th><td>No avisa <small>(pasa directo a bloqueo)</small></td><td>Enemigo a menos de <b>100 m</b></td></tr>
+          </tbody>
+        </table>
+        <p><b>Garrisons y el 200 m.</b> Dos garrisons no pueden estar a menos de 200 m. El truco para medirlo a ojo: con el mapa en zoom out, cada cuadrado grande mide 200×200 m. Y ojo: no se puede construir más de dos sectores rojos adentro del territorio enemigo.</p>
+        <p><b>Al cruzar y al ver.</b> Smoke en las dos direcciones al cruzar calles abiertas: cruzar sin humo es regalar la cabeza. Proactividad con humos de ataque, nunca en defensa. FOV al 90% o más si tu PC lo banca.</p>
+        <!-- IMG: strat sketch del cuadrado de 200m sobre el mapa -->
+        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — regla 200 m</span><span>media/regla-200m.jpg</span></div></div><figcaption class="cap"><b>FIG 03.1</b> El cuadrado del mapa = 200 m.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- ==================== 04 · INFANTERÍA ==================== -->
+    <section class="sec" id="infanteria">
+      <div class="ord-stamp">04</div>
+      <div class="sec-head reveal">
+        <p class="tag">04 · Gameplay Infantería</p>
+        <h2>Cómo moverse en edificios</h2>
+        <p class="sub">CQB, corta y media distancia. Acá se define el punto.</p>
+      </div>
+      <div class="sec-body">
+        <p>Cubrí los edificios y rotá adentro; repartite, no se junten en una sola pieza. Rara vez tendrías que estar parado: agachado o cuerpo a tierra, y si no hay cobertura, usá los desniveles del terreno. La muerte llega rápido: alcanza una ráfaga o un tiro para borrar a un pelotón entero.</p>
+        <div class="call"><span class="k">Humo y granadas</span><p>Humos de ataque para cubrir el avance; en defensa no. Proactividad con las granadas: en CQB una bien tirada resuelve un cuarto entero.</p></div>
+        <!-- CLIP: limpiar un cuarto con granada + entrada -->
+        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — limpiar cuarto</span><span>media/cqb-cuarto.webm · loop</span></div></div><figcaption class="cap"><b>FIG 04.1</b> Granada, entrada, siguiente pieza.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- ==================== 05 · TANQUISTA ==================== -->
+    <section class="sec" id="tanquista">
+      <div class="ord-stamp">05</div>
+      <div class="sec-head reveal">
+        <p class="tag">05 · Gameplay Tanquista</p>
+        <h2>Fierros</h2>
+        <p class="sub">La tripulación son tres, y cada puesto tiene su laburo.</p>
+      </div>
+      <div class="sec-body">
+
+        <div class="rtype" style="--c:var(--tan-dim)">
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/tank_cmd.png" alt="Comandante de tanque"></div>
+            <div class="rc"><h4>Comandante de tanque</h4><p>Llama los tiros. Binoculares y línea directa con comando, oficiales y armor. Decide posiciones, objetivos y cuándo entrar o salir.</p></div>
+          </div>
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/tank_crew.png" alt="Artillero"></div>
+            <div class="rc"><h4>Artillero</h4><p>Opera el cañón. Detalle clave: cuanto más zoom, más lento gira la torreta —alejá el zoom para velocidad, acercalo para precisión—. El MG del tanque alcanza para reventar vehículos ligeros.</p></div>
+          </div>
+          <div class="rrow">
+            <div class="ic"><img src="media/icons/tank_crew.png" alt="Conductor"></div>
+            <div class="rc"><h4>Conductor</h4><p>Maneja y reposiciona. Mantener el frente hacia el enemigo cuando conviene y, sobre todo, no exponer los laterales ni la retaguardia. La movilidad bien usada gana el duelo antes de disparar.</p></div>
+          </div>
+        </div>
+
+        <div class="call warn"><span class="k">Nunca</span><p>Al pesado enemigo no lo enfrenten de frente. Buscá el flanco o la retaguardia; ahí está el daño real.</p></div>
+        <!-- CLIP: flanqueo a un tanque + impacto trasero -->
+        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — flanqueo</span><span>media/flanqueo-tanque.webm · loop</span></div></div><figcaption class="cap"><b>FIG 05.1</b> Retaguardia = daño que cuenta.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- ==================== 06 · REGLAS ==================== -->
+    <section class="sec" id="reglas">
+      <div class="ord-stamp">06</div>
+      <div class="sec-head reveal">
+        <p class="tag">06 · Reglas</p>
+        <h2>Rulesets competitivos</h2>
+        <p class="sub">Resumen según comp-hll.org. Algunas todavía no están publicadas; ese espacio queda reservado.</p>
+      </div>
+      <div class="sec-body">
+        <div class="rule-block pending">
+          <h3>18 vs 18</h3>
+          <p class="fmt">FORMATO · WARFARE MODIFICADO</p>
+          <p>Comp-HLL tiene un ruleset propio de 18v18, pero todavía figura como "coming soon": los detalles no están publicados. Cuando salga, va acá.</p>
+          <p class="src">Fuente: comp-hll.org — 18v18 Ruleset (aún sin publicar).</p>
+        </div>
+        <div class="rule-block">
+          <h3>36 vs 36</h3>
+          <p class="fmt">FORMATO · SKIRMISH (LARGE-SCALE)</p>
+          <p>Entra dentro del ruleset de Skirmish. Duración 30 minutos; gana quien controla más tiempo el punto y, si empatan, desempata por kills.</p>
+          <p>Armor: máximo <b>un tanque mediano</b> y <b>una tripulación</b> por equipo. <b>Artillery Strike no se permite</b>. Los nodos se construyen dentro de los sectores de HQ y <b>no se destruyen</b> los del rival. Romper esas reglas es forfeit.</p>
+          <p class="src">Fuente: comp-hll.org — Competitive Skirmish Ruleset.</p>
+        </div>
+        <div class="rule-block">
+          <h3>49 vs 49</h3>
+          <p class="fmt">FORMATO · WARFARE — OJO: ES 49v49, NO 50v50</p>
+          <p>El formato grande de Warfare es 49 por lado. Duración 90 minutos; se gana con un 5-0 (victoria inmediata) o con la mayoría (3-2 o mejor) al final.</p>
+          <p>Por default no se permiten el <b>Panther</b> ni el <b>Artillery Strike</b>. Un solo artillero designado usa un cañón en HQ toda la partida. Hay variantes por acuerdo mutuo. Nodos igual que en Skirmish.</p>
+          <p class="src">Fuente: comp-hll.org — Competitive Warfare Ruleset.</p>
+        </div>
+        <div class="foot" style="font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)">FIN DEL DOCUMENTO · v0.3 — se sigue trabajando.</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+const toggle=document.getElementById('toggle'),nav=document.getElementById('nav');
+if(toggle)toggle.addEventListener('click',()=>nav.classList.toggle('open'));
+nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
+const links=[...nav.querySelectorAll('a')],map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
+const spy=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));map.get(e.target.id)?.classList.add('active')}})},{rootMargin:'-45% 0px -50% 0px',threshold:0});
+document.querySelectorAll('.sec').forEach(s=>spy.observe(s));
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>
