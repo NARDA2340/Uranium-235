@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>URANIUM 235 — Manual HLL</title>
 
-<!-- Sitio = este archivo + la carpeta "media/". Clips e imagenes van marcados con CLIP e IMG. Iconos de rol en media/icons/. -->
-
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
@@ -52,15 +50,17 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .side .foot{margin-top:auto;font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;line-height:1.7}
 
 /* Main */
-.main{flex:1 1 auto;min-width:0;max-width:940px;padding:0 clamp(20px,5vw,64px)}
+.main{flex:1 1 auto;min-width:0;max-width:940px;margin:0 auto;padding:0 clamp(20px,5vw,64px)}
 
 /* Hero */
 .hero{padding:88px 0 60px;border-bottom:1px solid var(--line)}
-.hero .eyebrow{font-family:var(--f-type);font-size:12px;letter-spacing:.2em;color:var(--amber);text-transform:uppercase}
-.hero h1{font-size:clamp(48px,8vw,94px);font-weight:700;text-transform:uppercase;letter-spacing:-.005em;margin:14px 0 0}
-.hero h1 span{display:block;color:var(--amber)}
+.hero .eyebrow{font-family:var(--f-type);font-size:13px;letter-spacing:.06em;color:var(--amber);text-transform:none;max-width:60ch}
+.hero h1{font-size:clamp(28px,4.3vw,48px);font-weight:700;text-transform:uppercase;letter-spacing:-.01em;margin:14px 0 0;color:var(--amber);white-space:nowrap}
 .hero .lede{max-width:56ch;margin-top:22px;color:var(--tan);font-size:19px}
 .hero .doctrine{margin-top:30px;padding:16px 20px;border-left:3px solid var(--amber);background:var(--surface);font-family:var(--f-display);font-weight:500;font-size:20px;letter-spacing:.01em}
+.hero .mandate{margin-top:22px;padding:16px 20px;border:1px solid var(--amber);background:linear-gradient(90deg,rgba(217,138,43,.13),transparent);max-width:66ch}
+.hero .mandate .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber-hi);display:block;margin-bottom:5px}
+.hero .mandate p{margin:0;font-family:var(--f-display);font-weight:500;font-size:17px;letter-spacing:.015em;color:var(--tan)}
 
 /* Section */
 .sec{padding:70px 0;border-bottom:1px solid var(--line);position:relative}
@@ -80,9 +80,14 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .rtype-head .n{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--tan-dim);letter-spacing:.1em}
 
 /* Fila de rol: ícono + texto */
-.rrow{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid rgba(74,78,51,.45)}
-.rrow .ic{width:58px;height:58px;flex:0 0 58px;display:grid;place-items:center;opacity:.95}
-.rrow .ic img{width:100%;height:100%;object-fit:contain;display:block}
+.rrow{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid rgba(74,78,51,.45);align-items:flex-start}
+.rrow .ic{width:60px;height:60px;flex:0 0 60px;display:grid;place-items:center;border:1.5px solid var(--c,var(--line));border-radius:50%;background:#0e0f0a;overflow:hidden}
+.rrow .ic img{width:60%;height:60%;object-fit:contain;display:block;margin:auto}
+
+/* Conector tipo organigrama entre familias de rol */
+.flow-arrow{display:flex;justify-content:center;align-items:center;padding:4px 0}
+.flow-arrow i{display:block;width:2px;height:38px;background:linear-gradient(var(--line),var(--amber));position:relative}
+.flow-arrow i::after{content:"";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--amber)}
 .rrow .rc{min-width:0}
 .rrow .rc h4{font-family:var(--f-display);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin:0 0 3px}
 .rrow .rc h4 .flag{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;color:var(--c);margin-left:10px;vertical-align:middle}
@@ -102,7 +107,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .call p{margin:0;max-width:none}
 
 /* Media */
-.fig{margin:22px 0;border:1px solid var(--line);background:#0e0f0a;max-width:720px}
+.fig{margin:22px auto;border:1px solid var(--line);background:#0e0f0a;max-width:720px}
 .fig .frame{position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--surface)}
 .fig .frame video,.fig .frame img{width:100%;height:100%;object-fit:cover;display:block}
 .fig .placeholder{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:8px;color:var(--tan-dim);font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;background:repeating-linear-gradient(45deg,transparent 0 14px,rgba(74,78,51,.14) 14px 15px)}
@@ -111,7 +116,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .fig .cap b{color:var(--amber);font-weight:700}
 
 /* Imagen real (captura/diagrama): se muestra completa, sin recorte, clic para ampliar */
-.shot{margin:22px 0;border:1px solid var(--line);background:#12130d;max-width:820px}
+.shot{margin:22px auto;border:1px solid var(--line);background:#12130d;max-width:820px}
 .shot a{display:block;padding:12px;background:#1a1c12;line-height:0;text-align:center;cursor:zoom-in;transition:background .18s}
 .shot a:hover{background:#20221733}
 .shot img{max-width:100%;max-height:620px;width:auto;height:auto;display:inline-block;vertical-align:top;border:1px solid rgba(74,78,51,.5)}
@@ -153,6 +158,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
   .side .toggle{display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);color:var(--tan);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:8px 12px;cursor:pointer}
   .main{max-width:100%}
   .hero{padding:48px 0 40px}
+  .hero h1{white-space:normal;font-size:clamp(26px,7vw,40px)}
   .sec>.ord-stamp{font-size:82px;top:18px}
   .ref{flex-direction:column;align-items:flex-start;gap:6px}
 }
@@ -188,10 +194,11 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
   <main class="main">
 
     <header class="hero reveal">
-      <p class="eyebrow">Briefing · Leer antes de entrar</p>
-      <h1>Ganar es<br><span>trabajar juntos</span></h1>
-      <p class="lede">La base táctica del clan, ordenada como recorrido. No es un dogma: es lo que nos funciona. Está sujeto a cambios y a lo que aporte cada uno.</p>
+      <p class="eyebrow">Guía paso a paso de cómo jugar con URANIUM 235 con un perfil competitivo.</p>
+      <h1>Ganar es trabajar juntos</h1>
+      <p class="lede">La base táctica del clan, ordenada como recorrido. No es un dogma: es lo que nos funciona. Está sujeto a mejoras: cada actualización se comunica en los canales del clan por Discord.</p>
       <div class="doctrine">"La información bien transmitida y ser consciente de lo que estás haciendo es lo que necesitamos para ganar."</div>
+      <div class="mandate"><span class="k">Lectura obligatoria</span><p>Este contenido tiene que ser recorrido por todas y todos los miembros del clan. El conocimiento del manual se tiene —y se va a reflejar— en el rendimiento del equipo.</p></div>
     </header>
 
     <!-- ==================== 00 · ROLES ==================== -->
@@ -229,6 +236,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
           <div class="ref"><span class="tagx">Referencia →</span><p>OP y garrison · supply drops · reservado para imagen/diagrama</p></div>
         </div>
 
+        <div class="flow-arrow" aria-hidden="true"><i></i></div>
+
         <!-- ---------- SOPORTE ---------- -->
         <div class="rtype" style="--c:var(--sup)">
           <div class="rtype-head"><span class="sq"></span><h3>Soporte</h3><span class="n">sostiene · construye</span></div>
@@ -252,6 +261,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
           <!-- REFERENCIA: dejá acá imágenes de supplies, minas/estructuras y satchels -->
           <div class="ref"><span class="tagx">Referencia →</span><p>supplies · minas y estructuras · satchels · reservado para imagen/diagrama</p></div>
         </div>
+
+        <div class="flow-arrow" aria-hidden="true"><i></i></div>
 
         <!-- ---------- CHOQUE ---------- -->
         <div class="rtype" style="--c:var(--cho)">
