@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Cómo mejorar</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#14150f; --surface:#1c1e14; --surface-2:#24261a; --line:#4a4e33;
+  --tan:#d3cbb0; --tan-dim:#948d74; --amber:#d98a2b; --amber-hi:#f0a63e;
+  --red:#b0402c; --green-op:#7d8a4a;
+  --cmd:#f0a63e; --sup:#96a652; --cho:#c65a3c; --arm:#948d74;
+  --f-display:"Saira Condensed",system-ui,sans-serif;
+  --f-body:"Saira",system-ui,sans-serif;
+  --f-mono:"Space Mono",ui-monospace,monospace;
+  --f-type:"Special Elite",var(--f-mono);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tan);font-family:var(--f-body);font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--amber);text-decoration:none}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.05;margin:0}
+
+/* Top bar */
+.top{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(18px,5vw,54px);background:linear-gradient(180deg,var(--surface),rgba(20,21,15,.92));border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+.top .back{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:13px;letter-spacing:.04em;color:var(--tan)}
+.top .back:hover{color:var(--amber)}
+.top .brand{font-family:var(--f-type);font-size:12px;letter-spacing:.16em;color:var(--tan-dim);text-transform:uppercase}
+
+.wrap{max-width:900px;margin:0 auto;padding:0 clamp(18px,5vw,54px)}
+
+/* Hero */
+.hero{padding:64px 0 34px;border-bottom:1px solid var(--line)}
+.hero .eyebrow{font-family:var(--f-type);font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase}
+.hero h1{font-size:clamp(38px,7vw,66px);font-weight:700;text-transform:uppercase;color:var(--amber);margin-top:12px;letter-spacing:-.01em}
+.hero p{max-width:60ch;margin-top:16px;color:var(--tan-dim)}
+
+/* Familia */
+.fam{padding:44px 0 10px}
+.fam-head{display:flex;align-items:center;gap:12px;padding-bottom:10px;border-bottom:2px solid var(--c);margin-bottom:8px}
+.fam-head .sq{width:13px;height:13px;background:var(--c);flex:0 0 13px}
+.fam-head h2{font-size:26px;text-transform:uppercase;letter-spacing:.08em;color:var(--c)}
+
+/* Tarjeta de rol */
+.role{border:1px solid var(--line);border-left:3px solid var(--c);background:var(--surface);padding:20px 22px;margin:18px 0;scroll-margin-top:80px}
+.role h3{font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan)}
+.role .clave{margin:6px 0 12px;font-family:var(--f-display);font-weight:500;font-size:16px;color:var(--c)}
+.role ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+.role li{position:relative;padding-left:22px;max-width:70ch}
+.role li::before{content:"▸";position:absolute;left:0;top:0;color:var(--c);font-size:14px}
+.role li b{color:var(--tan)}
+.role .err{margin-top:14px;padding:10px 14px;border-left:3px solid var(--red);background:var(--surface-2);font-size:15px}
+.role .err b{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);display:block;margin-bottom:3px}
+
+.note{margin:30px 0 10px;padding:14px 18px;border:1px dashed var(--line);background:var(--surface);font-family:var(--f-mono);font-size:13px;color:var(--tan-dim)}
+.foot{padding:40px 0 60px;font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em}
+</style>
+</head>
+
+<body>
+
+<div class="top">
+  <a class="back" href="index.html">← Volver al manual</a>
+  <span class="brand">Uranium 235 · Cómo mejorar</span>
+</div>
+
+<div class="wrap">
+
+  <header class="hero">
+    <p class="eyebrow">Tutoriales · práctica por rol</p>
+    <h1>Cómo mejorar</h1>
+    <p>Consejos concretos por rol para subir el nivel individual. Son un punto de partida —lo que se practica en scrims y se corrige entre todos—. Cada bloque es corto a propósito: leelo, aplicalo, volvé.</p>
+  </header>
+
+  <!-- ============ COMANDANCIA ============ -->
+  <section class="fam" style="--c:var(--cmd)">
+    <div class="fam-head"><span class="sq"></span><h2>Comandancia</h2></div>
+
+    <article class="role" id="comandante">
+      <h3>Comandante</h3>
+      <p class="clave">Ganás con decisiones, no con el arma.</p>
+      <ul>
+        <li>Abrí siempre con <b>supply truck y garrison temprana</b> en marcha: comando sin garry en el minuto uno regala el mapa.</li>
+        <li>Usá las habilidades para <b>romper garrisons</b> (bombing run, precision strike), no para farmear kills sueltos.</li>
+        <li>Escaloná las abilities: no gastes todo junto, mantené presión constante y reservá para el momento clave.</li>
+        <li>Dirigí <b>por voz</b> a los oficiales con objetivos claros; la marca sola no alcanza.</li>
+        <li>Leé dónde muere tu equipo: eso te dice dónde está la garry enemiga que hay que cazar.</li>
+      </ul>
+      <div class="err"><b>Error común</b>Quedarse mirando el mapa sin comunicar. Si no hablás, comando no sirve.</div>
+    </article>
+
+    <article class="role" id="oficial">
+      <h3>Oficial</h3>
+      <p class="clave">Sos el comando de tu escuadra.</p>
+      <ul>
+        <li>Tené <b>siempre un OP vivo</b> y bien puesto: un OP malo es mil veces mejor que ninguno.</li>
+        <li>Usá el reloj (deploy) <b>apenas está disponible</b>; no acumules cooldown.</li>
+        <li>Coordiná con comando y otros SL <b>antes</b> de mover a la escuadra.</li>
+        <li>Marcá enemigos y cantá los spawns rivales por voz.</li>
+        <li>Rotá el OP cuando el frente avanza; no dejes a la gente spawneando lejos del punto.</li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- ============ SOPORTE ============ -->
+  <section class="fam" style="--c:var(--sup)">
+    <div class="fam-head"><span class="sq"></span><h2>Soporte</h2></div>
+
+    <article class="role" id="soporte">
+      <h3>Soporte</h3>
+      <p class="clave">El que sostiene el ataque.</p>
+      <ul>
+        <li>Regla de oro: <b>cada vez que reapareces, soltá caja</b> donde haga falta, sin que te la pidan.</li>
+        <li>Primer build: <b>nodo de manpower</b> para bajar el cooldown de supplies.</li>
+        <li>Quedate <b>pegado al AT y al Ingeniero</b>: tu caja explosiva es lo que los vuelve letales.</li>
+        <li>Aprendé a dropear 50 supplies rápido para garrisons y cañón AT.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="ingeniero">
+      <h3>Ingeniero</h3>
+      <p class="clave">Control del terreno.</p>
+      <ul>
+        <li><b>Minas AP</b> en cuellos de botella: puertas, trincheras, tránsito de infantería.</li>
+        <li><b>Minas AT</b> en rutas y puntos de choque de vehículos.</li>
+        <li>Máximo 6 minas: la 7ª borra la 1ª, así que <b>reposicioná al avanzar</b>.</li>
+        <li>Satchels para nodos y garrisons profundas; sincronizá con el push.</li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- ============ CHOQUE ============ -->
+  <section class="fam" style="--c:var(--cho)">
+    <div class="fam-head"><span class="sq"></span><h2>Choque</h2></div>
+
+    <article class="role" id="asalto">
+      <h3>Asalto</h3>
+      <p class="clave">CQB y superioridad de fuego.</p>
+      <ul>
+        <li>Es corta distancia: <b>granada, entrás, limpiás el cuarto, avanzás</b>.</li>
+        <li>No pelees a distancia con el STG contra rifleros: acortá la distancia.</li>
+        <li>Recargá <b>en cobertura</b>, nunca parado en la puerta.</li>
+        <li>Usá tu volumen de fuego para cubrir el avance del resto.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="fusilero-auto">
+      <h3>Fusilero automático</h3>
+      <p class="clave">Fuego de apoyo sostenido.</p>
+      <ul>
+        <li>Fijá la cabeza del enemigo mientras el resto de la escuadra flanquea.</li>
+        <li><b>Ráfagas cortas</b> para controlar el retroceso y no quedar sin balas.</li>
+        <li>Posicionate con línea de fuego a las salidas y ángulos del enemigo.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="mg">
+      <h3>Ametrallador (MG42)</h3>
+      <p class="clave">Supresión pura. Nunca fijo.</p>
+      <ul>
+        <li>Tirá, matá 1-2 o suprimí las salidas, y <b>rotá</b>.</li>
+        <li>Necesitás <b>bípode</b> (cuerpo a tierra o sobre superficie) para apuntar: elegí la posición antes de disparar.</li>
+        <li>Cubrí ángulos largos y accesos; el MG no es para CQB.</li>
+        <li>Cambiá de lugar después del 2º muerto: ya te ubicaron.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="fusilero">
+      <h3>Fusilero</h3>
+      <p class="clave">La base. Donde se aprende.</p>
+      <ul>
+        <li>Practicá <b>movimiento y lectura de mapa</b>: es la clase para aprender los fundamentos.</li>
+        <li>Tirá cajas de munición al piso para reponer a la escuadra.</li>
+        <li>Trabajá el tiro a media distancia y el uso de cobertura.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="antitanque">
+      <h3>Anti tanque</h3>
+      <p class="clave">Ofensivo, nunca de frente.</p>
+      <ul>
+        <li>Buscá los blindados por <b>flanco o retaguardia</b>; no los esperes de frente.</li>
+        <li>Dejá acercar al tanque: mejor ángulo, y de cerca corrés más rápido de lo que gira la torreta.</li>
+        <li>Escuchá el <b>impacto</b>: si no suena, tu cohete no hizo daño.</li>
+        <li>Recargá con la caja del Soporte para munición extra. <b>Gastá la munición.</b></li>
+      </ul>
+    </article>
+  </section>
+
+  <!-- ============ TANQUE ============ -->
+  <section class="fam" style="--c:var(--arm)">
+    <div class="fam-head"><span class="sq"></span><h2>Tanque</h2></div>
+
+    <article class="role" id="tank-cmd">
+      <h3>Comandante de tanque</h3>
+      <p class="clave">Llama los tiros.</p>
+      <ul>
+        <li>Con binoculares, marcá objetivos y mantené línea con comando y oficiales.</li>
+        <li>Elegí posiciones <b>hull-down</b> (casco tapado) y decidí cuándo entrar y cuándo salir.</li>
+        <li>No sobreextiendas: el tanque vale mucho, retirate a tiempo.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="artillero">
+      <h3>Artillero</h3>
+      <p class="clave">Precisión vs. velocidad de torreta.</p>
+      <ul>
+        <li><b>Menos zoom = torreta más rápida; más zoom = más precisión.</b> Ajustá según la distancia.</li>
+        <li>Apuntá a orugas y laterales del blindado enemigo.</li>
+        <li>El MG del tanque alcanza para vehículos ligeros e infantería cercana.</li>
+      </ul>
+    </article>
+
+    <article class="role" id="conductor">
+      <h3>Conductor</h3>
+      <p class="clave">La movilidad gana el duelo.</p>
+      <ul>
+        <li>Mantené el <b>frontal hacia el enemigo</b>; nunca expongas laterales ni retaguardia.</li>
+        <li>Usá cobertura y hull-down; reposicioná constantemente.</li>
+        <li>Tené la <b>reversa lista</b> para salir: no te claves en una posición mala.</li>
+      </ul>
+    </article>
+  </section>
+
+  <div class="note">Este contenido es un ejemplo inicial y se va a ampliar con clips y tutoriales. Las mejoras se comunican en los canales del clan por Discord.</div>
+  <div class="foot">URANIUM 235 · CÓMO MEJORAR · v0.1 — se sigue trabajando.</div>
+
+</div>
+</body>
+</html>

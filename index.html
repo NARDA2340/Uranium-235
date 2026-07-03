@@ -47,6 +47,11 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .nav a:hover{color:var(--tan);background:var(--surface-2)}
 .nav a.active{color:var(--amber-hi);border-left-color:var(--amber);background:var(--surface-2)}
 .nav a.active .ord{color:var(--amber)}
+.nav a.special{margin-top:14px;border-top:1px solid var(--amber);padding-top:15px;color:var(--amber-hi)}
+.nav a.special:hover{background:var(--surface-2);color:var(--amber-hi)}
+.nav a.special .ord{color:var(--amber)}
+.nav a.special .t{display:flex;flex-direction:column;gap:2px}
+.nav a.special .t b{font-family:var(--f-mono);font-weight:400;font-size:9.5px;letter-spacing:.08em;color:var(--tan-dim);text-transform:none}
 .side .foot{margin-top:auto;font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;line-height:1.7}
 
 /* Main */
@@ -92,6 +97,8 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .rrow .rc h4{font-family:var(--f-display);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin:0 0 3px}
 .rrow .rc h4 .flag{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;color:var(--c);margin-left:10px;vertical-align:middle}
 .rrow .rc p{margin:.3em 0;max-width:64ch}
+.rrow .rc .improve{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(217,138,43,.4);padding:4px 10px;border-radius:2px;transition:.15s}
+.rrow .rc .improve:hover{color:#0e0f0a;background:var(--amber);border-color:var(--amber)}
 
 /* Referencia por tipo (espacio reservado) */
 .ref{border:1px dashed var(--c);background:var(--surface);padding:14px 16px;margin:16px 0 0;display:flex;gap:14px;align-items:center}
@@ -186,6 +193,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
       <a href="#infanteria"><span class="ord">08</span> Gameplay Infantería</a>
       <a href="#tanquista"><span class="ord">09</span> Gameplay Tanquista</a>
       <a href="#reglas"><span class="ord">10</span> Reglas</a>
+      <a class="special" href="mejorar.html" target="_blank" rel="noopener"><span class="ord">↗</span><span class="t">Cómo mejorar<b>tutoriales · abre aparte</b></span></a>
     </nav>
     <button class="toggle" id="toggle">MENÚ ▾</button>
     <div class="foot">DOC. INTERNO<br>v0.4 · BORRADOR</div>
@@ -221,6 +229,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Comandante <span class="flag">◆ rol clave</span></h4>
               <p>Ve el tablero completo. Reparte recursos, tira supply drops y bombardeos, refuerza puntos, spawnea tanques y camiones de supply, y coloca garrisons. No dispara la partida con el arma: la dispara con las decisiones.</p>
+              <a class="improve" href="mejorar.html#comandante" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -229,6 +238,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Oficial</h4>
               <p>Lidera la escuadra. Con el reloj coloca OPs y garrisons, y tiene voz directa con comando, otras escuadras y armor. Sos el comando de tu escuadra: marcás, ordenás y sostenés los spawns.</p>
+              <a class="improve" href="mejorar.html#oficial" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -247,6 +257,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Soporte</h4>
               <p>Suma la caja de munición <b>explosiva</b> (repone cohetes del AT y granadas del Asalto), la caja liviana (balas) y 50 supplies (garrisons y cañón AT). Lo primero que construye es un nodo de <b>manpower</b>: le baja el cooldown para tirar supplies más seguido.</p>
+              <a class="improve" href="mejorar.html#soporte" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -255,6 +266,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Ingeniero</h4>
               <p>Minas AP como prioridad: puertas, trincheras, tránsito. Minas AT: caminos y puntos de choque de vehículos. Máximo 6 —la séptima reemplaza la primera—, así que reposicionalas al avanzar. Con satchels revienta nodos y garrisons profundos.</p>
+              <a class="improve" href="mejorar.html#ingeniero" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -273,6 +285,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Asalto</h4>
               <p>STG 44, fuego automático sostenido y superioridad de fuego. En puro edificio (CQB) es de lo más ventajoso: entrás, resolvés el cuarto y avanzás.</p>
+              <a class="improve" href="mejorar.html#asalto" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -281,6 +294,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Fusilero automático</h4>
               <p>Rifle automático para fuego de apoyo sostenido a nivel escuadra: cubre avances y fija la cabeza del enemigo mientras el resto se mueve.</p>
+              <a class="improve" href="mejorar.html#fusilero-auto" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -289,6 +303,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Ametrallador (MG42)</h4>
               <p>Supresión pura. Regla de oro: no se queda fijo. Tira, mata algunos o suprime las salidas, y <b>rota</b>. No puede apuntar con miras sin desplegar el bípode (cuerpo a tierra o sobre una superficie), por eso la posición lo es todo. Después del segundo muerto ya saben dónde estás.</p>
+              <a class="improve" href="mejorar.html#mg" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -297,6 +312,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Fusilero</h4>
               <p>La clase base. Buena para aprender a moverse, y con un detalle útil: tira cajas de munición al piso para reponer a la escuadra.</p>
+              <a class="improve" href="mejorar.html#fusilero" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -305,6 +321,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <div class="rc">
               <h4>Anti tanque</h4>
               <p>Ofensivo: busca los blindados, no los espera, siempre con ventaja al flanco o retaguardia. No siempre conviene disparar apenas ves un tanque —dejarlo acercar te da mejor ángulo y de cerca corrés más rápido de lo que gira la torreta—. Al pesado <b>nunca de frente</b>; y si no escuchás el sonido de impacto, tu cohete no hizo daño. <b>Gastá la munición.</b></p>
+              <a class="improve" href="mejorar.html#antitanque" target="_blank" rel="noopener">Cómo mejorar ↗</a>
             </div>
           </div>
 
@@ -366,16 +383,10 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
         <p class="sub">Banderas, garrisons, posiciones de tanque y rutas. Todo codificado por el color de tu grupo.</p>
       </div>
       <div class="sec-body">
-        <p>Las <b>banderas puntiagudas</b> marcan dónde va cada <b>OP</b>, codificadas por color de grupo —acá es donde te sirve haber memorizado tu color en el roster—. Las <b>banderas normales</b> (celeste o verde, en general) marcan <b>garrisons</b> a construir. Las letras <b>L / M / R</b> en círculo son las posiciones generales de tanque en la fase inicial. Los íconos de ametralladora marcan dónde se despliega el <b>MG</b>.</p>
-        <figure class="shot"><a href="media/premarch/stratsketch-simbolos.png" target="_blank" rel="noopener"><img src="media/premarch/stratsketch-simbolos.png" alt="Símbolos del stratsketch: OPs por color, garrisons, posiciones L/M/R y MGs" loading="lazy"></a><figcaption class="cap"><b>FIG 03.1</b> OPs por color, garrisons, L/M/R, MGs.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p>Los <b>círculos rojos</b> son zonas que el recon tiene que marcar sí o sí: suelen ser el tránsito por donde ataca el rival.</p>
-        <figure class="shot"><a href="media/premarch/stratsketch-circulos-rojos.png" target="_blank" rel="noopener"><img src="media/premarch/stratsketch-circulos-rojos.png" alt="Círculos rojos: zonas de marca obligatoria del recon" loading="lazy"></a><figcaption class="cap"><b>FIG 03.2</b> Zonas de marca del recon.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p>Las <b>líneas finas punteadas</b> son la ruta aproximada de los camiones de transporte y suministro en la apertura, o la ruta de un tanque de recon. Las <b>leyendas</b> te dicen de qué HQ y camión sale cada SL, codificadas por color —los SL de un mismo grupo se pueden separar: el SL1 de INF2 puede salir del HQ de arriba y el SL2 del HQ del medio—.</p>
-        <div class="call warn"><span class="k">Ojo</span><p>Dónde aparece tu grupo no cambia dónde van tus nodos si tenés esa responsabilidad asignada. Si te toca soltar nodos abajo pero tu grupo spawnea arriba, igual vas para abajo a plantarlos.</p></div>
-        <figure class="shot"><a href="media/premarch/stratsketch-leyendas.png" target="_blank" rel="noopener"><img src="media/premarch/stratsketch-leyendas.png" alt="Leyendas del stratsketch por HQ y color de grupo" loading="lazy"></a><figcaption class="cap"><b>FIG 03.3</b> Leyendas por HQ y color de grupo.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p>Si ves una <b>línea verde punteada</b> desde una bandera de garrison hasta un OP verde de defensa, esa garrison la construye el escuadrón de defensa, no vos. Si sos el SL de defensa, es tu responsabilidad; si sos la infantería de ese escuadrón, después de plantar nodos pasás a soporte para tirarle cajas a tu SL.</p>
-        <div class="call"><span class="k">Se grita si hace falta</span><p>Si hay que gritarle al que agarró soporte para que suelte de una vez, se grita: demorar una guarnición inicial es la diferencia entre una recaptura rápida del punto medio y perder 4-1 en los primeros diez minutos.</p></div>
-        <figure class="shot"><a href="media/premarch/stratsketch-garrison-defensa.png" target="_blank" rel="noopener"><img src="media/premarch/stratsketch-garrison-defensa.png" alt="Línea verde que indica una garrison a cargo de la defensa" loading="lazy"></a><figcaption class="cap"><b>FIG 03.4</b> Línea verde = garrison de defensa.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
+        <div class="rule-block pending">
+          <p class="fmt">EN PREPARACIÓN</p>
+          <p>El contenido y las imágenes de esta sección se cargan más adelante.</p>
+        </div>
       </div>
     </section>
 
@@ -488,15 +499,15 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
         <div class="rtype" style="--c:var(--tan-dim)">
           <div class="rrow">
             <div class="ic"><img src="media/icons/tank_cmd.png" alt="Comandante de tanque"></div>
-            <div class="rc"><h4>Comandante de tanque</h4><p>Llama los tiros. Binoculares y línea directa con comando, oficiales y armor. Decide posiciones, objetivos y cuándo entrar o salir.</p></div>
+            <div class="rc"><h4>Comandante de tanque</h4><p>Llama los tiros. Binoculares y línea directa con comando, oficiales y armor. Decide posiciones, objetivos y cuándo entrar o salir.</p><a class="improve" href="mejorar.html#tank-cmd" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
           </div>
           <div class="rrow">
             <div class="ic"><img src="media/icons/tank_crew.png" alt="Artillero"></div>
-            <div class="rc"><h4>Artillero</h4><p>Opera el cañón. Detalle clave: cuanto más zoom, más lento gira la torreta —alejá el zoom para velocidad, acercalo para precisión—. El MG del tanque alcanza para reventar vehículos ligeros.</p></div>
+            <div class="rc"><h4>Artillero</h4><p>Opera el cañón. Detalle clave: cuanto más zoom, más lento gira la torreta —alejá el zoom para velocidad, acercalo para precisión—. El MG del tanque alcanza para reventar vehículos ligeros.</p><a class="improve" href="mejorar.html#artillero" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
           </div>
           <div class="rrow">
             <div class="ic"><img src="media/icons/tank_crew.png" alt="Conductor"></div>
-            <div class="rc"><h4>Conductor</h4><p>Maneja y reposiciona. Mantener el frente hacia el enemigo cuando conviene y, sobre todo, no exponer los laterales ni la retaguardia. La movilidad bien usada gana el duelo antes de disparar.</p></div>
+            <div class="rc"><h4>Conductor</h4><p>Maneja y reposiciona. Mantener el frente hacia el enemigo cuando conviene y, sobre todo, no exponer los laterales ni la retaguardia. La movilidad bien usada gana el duelo antes de disparar.</p><a class="improve" href="mejorar.html#conductor" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
           </div>
         </div>
 
