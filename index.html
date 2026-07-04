@@ -7,21 +7,22 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Saira:ital,wght@0,400;0,500;0,600;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
 
 <style>
 :root{
-  --bg:#14150f; --surface:#1c1e14; --surface-2:#24261a; --line:#4a4e33;
-  --tan:#d3cbb0; --tan-dim:#948d74; --amber:#d98a2b; --amber-hi:#f0a63e;
-  --red:#b0402c; --green-op:#7d8a4a; --stamp:rgba(211,203,176,.055);
+  --bg:#141009; --surface:#1e1810; --surface-2:#282013; --line:#5a4d2a; --line-dim:#3a3016;
+  --tan:#dccfb0; --tan-dim:#9c8e6c; --amber:#c99a2e; --amber-hi:#e6bc55;
+  --red:#b0432f; --green-op:#6f8a3f; --stamp:rgba(220,207,176,.05);
+  --paper:#e7e0cd; --paper-ink:#2a2414;
 
   /* colores por tipo de rol */
-  --cmd:#f0a63e;  /* comandancia */
+  --cmd:#e0b64a;  /* comandancia */
   --sup:#96a652;  /* soporte */
   --cho:#c65a3c;  /* choque */
 
-  --f-display:"Saira Condensed",system-ui,sans-serif;
-  --f-body:"Saira",system-ui,sans-serif;
+  --f-display:"Zilla Slab",Georgia,serif;
+  --f-body:"Zilla Slab",Georgia,serif;
   --f-mono:"Space Mono",ui-monospace,monospace;
   --f-type:"Special Elite",var(--f-mono);
   --sidebar:272px;
@@ -29,7 +30,7 @@
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--tan);font-family:var(--f-body);font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle at 20% 10%,rgba(217,138,43,.05),transparent 40%),radial-gradient(circle at 85% 90%,rgba(125,138,74,.05),transparent 45%)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle at 50% -10%,rgba(201,154,46,.07),transparent 55%),radial-gradient(circle at 88% 92%,rgba(111,138,63,.04),transparent 45%),repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 1px,transparent 1px 3px)}
 a{color:var(--amber);text-decoration:none}
 h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .shell{display:flex;min-height:100vh;position:relative;z-index:1}
@@ -63,15 +64,19 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
 .hero h1{font-size:clamp(28px,4.3vw,48px);font-weight:700;text-transform:uppercase;letter-spacing:-.01em;margin:14px 0 0;color:var(--amber);white-space:nowrap}
 .hero .lede{max-width:56ch;margin-top:22px;color:var(--tan);font-size:19px}
 .hero .doctrine{margin-top:30px;padding:16px 20px;border-left:3px solid var(--amber);background:var(--surface);font-family:var(--f-display);font-weight:500;font-size:20px;letter-spacing:.01em}
-.hero .mandate{margin-top:22px;padding:16px 20px;border:1px solid var(--amber);background:linear-gradient(90deg,rgba(217,138,43,.13),transparent);max-width:66ch}
-.hero .mandate .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber-hi);display:block;margin-bottom:5px}
-.hero .mandate p{margin:0;font-family:var(--f-display);font-weight:500;font-size:17px;letter-spacing:.015em;color:var(--tan)}
+.hero .mandate{position:relative;margin-top:26px;padding:20px 22px;background:var(--paper);color:var(--paper-ink);max-width:66ch;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.hero .mandate::before,.hero .mandate::after{content:"";position:absolute;width:16px;height:16px;border:2px solid var(--paper-ink);opacity:.5}
+.hero .mandate::before{top:6px;left:6px;border-right:0;border-bottom:0}
+.hero .mandate::after{bottom:6px;right:6px;border-left:0;border-top:0}
+.hero .mandate .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7a5a1e;display:block;margin-bottom:6px}
+.hero .mandate p{margin:0;font-family:var(--f-type);font-size:15px;line-height:1.7;letter-spacing:.01em;color:var(--paper-ink)}
 
 /* Section */
 .sec{padding:70px 0;border-bottom:1px solid var(--line);position:relative}
 .sec>.ord-stamp{position:absolute;right:-6px;top:38px;font-family:var(--f-type);font-size:120px;color:var(--stamp);pointer-events:none;user-select:none;z-index:0}
 .sec-head{position:relative;z-index:1;margin-bottom:8px}
-.sec-head .tag{font-family:var(--f-type);font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase}
+.sec-head .tag{display:flex;align-items:center;gap:14px;font-family:var(--f-type);font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase}
+.sec-head .tag::after{content:"";flex:1;height:0;border-top:1px dashed var(--line)}
 .sec-head h2{font-size:clamp(34px,5.5vw,54px);text-transform:uppercase;font-weight:700;margin-top:8px}
 .sec-head .sub{color:var(--tan-dim);margin-top:10px;max-width:62ch}
 .sec-body{position:relative;z-index:1}
@@ -170,6 +175,25 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
   .ref{flex-direction:column;align-items:flex-start;gap:6px}
 }
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}}
+
+/* ===== Motivos "expediente" ===== */
+/* Sello estampado */
+.stamp{display:inline-block;margin-top:26px;padding:7px 16px;border:2px solid var(--red);color:var(--red);font-family:var(--f-type);font-size:13px;letter-spacing:.18em;text-transform:uppercase;transform:rotate(-3deg);opacity:.9}
+.stamp.ok{border-color:var(--green-op);color:var(--green-op)}
+
+/* Corchetes de esquina en tarjetas (dossier) */
+.rule-block{position:relative}
+.rule-block::before,.rule-block::after{content:"";position:absolute;width:15px;height:15px;border:2px solid var(--amber);opacity:.55;pointer-events:none}
+.rule-block::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
+.rule-block::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
+
+/* Listas por puntos (texto reescrito) */
+.blist{list-style:none;margin:14px 0;padding:0;display:flex;flex-direction:column;gap:9px;max-width:66ch}
+.blist li{position:relative;padding-left:22px}
+.blist li::before{content:"▸";position:absolute;left:0;top:0;color:var(--amber);font-size:14px}
+.blist li b{color:var(--tan)}
+.blist.warn li::before{color:var(--red)}
+.blist.ok li::before{color:var(--green-op)}
 </style>
 </head>
 
@@ -207,6 +231,7 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
       <p class="lede">La base táctica del clan, ordenada como recorrido. No es un dogma: es lo que nos funciona. Está sujeto a mejoras: cada actualización se comunica en los canales del clan por Discord.</p>
       <div class="doctrine">"La información bien transmitida y ser consciente de lo que estás haciendo es lo que necesitamos para ganar."</div>
       <div class="mandate"><span class="k">Lectura obligatoria</span><p>Este contenido tiene que ser recorrido por todas y todos los miembros del clan. El conocimiento del manual se tiene —y se va a reflejar— en el rendimiento del equipo.</p></div>
+      <div class="stamp">Documento interno · Clasificado</div>
     </header>
 
     <!-- ==================== 00 · ROLES ==================== -->
@@ -436,10 +461,14 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
         <p class="sub">Esto separa la buena partida de la mala.</p>
       </div>
       <div class="sec-body">
-        <p>El Soporte no espera que le pidan: cada vez que vuelve de morir, tira caja donde haga falta. Abrí el mapa cada 5–10–15 segundos, todo el tiempo —hábito número uno—: ahí ves marcas de enemigos, OPs propios cayendo y filtraciones.</p>
-        <p>Cubrí edificios y rotá adentro; no se amontonen todos en una pieza porque un misil los borra juntos. Si caen los OPs de tus oficiales, el que pueda los repone, aunque sea una cuadra más atrás.</p>
+        <ul class="blist">
+          <li><b>Soporte:</b> cada vez que volvés de morir, tirá caja donde haga falta, sin que te la pidan.</li>
+          <li><b>Abrí el mapa cada 5–10–15 segundos</b>, todo el tiempo: es el hábito número uno. Ahí ves enemigos marcados, OPs propios cayendo y filtraciones.</li>
+          <li>Cubrí edificios y rotá adentro; <b>no se amontonen</b> en una sola pieza: un misil los borra a todos juntos.</li>
+          <li>Si caen los OPs de tus oficiales, el que pueda los <b>repone</b>, aunque sea una cuadra más atrás.</li>
+          <li>Marcá garrys y OPs <b>enemigos</b>: si viene gente una y otra vez, asumí que hay un spawn y comunicalo. Si confirmás que es OP, aseguralo con granada.</li>
+        </ul>
         <div class="call"><span class="k">Regla de OPs</span><p>Un OP mal puesto es mil veces mejor que no tener ninguno. Si no, roten al garry o al OP que quede mejor posicionado.</p></div>
-        <p>Marcá garrys y OPs <b>enemigos</b>: si ves que viene X cantidad de gente una y otra vez, asumí y comunicá que hay un spawn. Si confirmás que es OP y tenés la posibilidad, aseguralo con granada.</p>
         <!-- IMG: strat sketch de red de spawns bien espaciada vs amontonada -->
         <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — red de spawns</span><span>media/red-spawns.jpg</span></div></div><figcaption class="cap"><b>FIG 06.1</b> Repartir la red, no amontonar.</figcaption></figure>
       </div>
@@ -463,8 +492,13 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
             <tr><th class="zone-red">Roja (enemiga)</th><td>No avisa <small>(pasa directo a bloqueo)</small></td><td>Enemigo a menos de <b>100 m</b></td></tr>
           </tbody>
         </table>
-        <p><b>Garrisons y el 200 m.</b> Dos garrisons no pueden estar a menos de 200 m. El truco para medirlo a ojo: con el mapa en zoom out, cada cuadrado grande mide 200×200 m. Y ojo: no se puede construir más de dos sectores rojos adentro del territorio enemigo.</p>
-        <p><b>Al cruzar y al ver.</b> Smoke en las dos direcciones al cruzar calles abiertas: cruzar sin humo es regalar la cabeza. Proactividad con humos de ataque, nunca en defensa. FOV al 90% o más si tu PC lo banca.</p>
+        <ul class="blist">
+          <li><b>Regla de los 200 m:</b> dos garrisons no pueden estar a menos de 200 m entre sí. Para medirlo a ojo, con el mapa en zoom out cada cuadrado grande es de 200×200 m.</li>
+          <li>No se pueden construir más de <b>dos sectores rojos</b> dentro del territorio enemigo.</li>
+          <li><b>Smoke al cruzar</b> calles abiertas, en las dos direcciones: cruzar sin humo es regalar la cabeza.</li>
+          <li>Humos <b>de ataque</b>, nunca en defensa.</li>
+          <li><b>FOV</b> al 90% o más si tu PC lo banca.</li>
+        </ul>
         <!-- IMG: strat sketch del cuadrado de 200m sobre el mapa -->
         <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — regla 200 m</span><span>media/regla-200m.jpg</span></div></div><figcaption class="cap"><b>FIG 07.1</b> El cuadrado del mapa = 200 m.</figcaption></figure>
       </div>
@@ -479,7 +513,11 @@ h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
         <p class="sub">CQB, corta y media distancia. Acá se define el punto.</p>
       </div>
       <div class="sec-body">
-        <p>Cubrí los edificios y rotá adentro; repartite, no se junten en una sola pieza. Rara vez tendrías que estar parado: agachado o cuerpo a tierra, y si no hay cobertura, usá los desniveles del terreno. La muerte llega rápido: alcanza una ráfaga o un tiro para borrar a un pelotón entero.</p>
+        <ul class="blist">
+          <li>Cubrí los edificios y rotá adentro; <b>repartite</b>, no se junten en una sola pieza.</li>
+          <li>Rara vez deberías estar parado: <b>agachado o cuerpo a tierra</b>, y si no hay cobertura, usá los desniveles del terreno.</li>
+          <li>La muerte llega rápido: una ráfaga o un tiro borra a un pelotón entero. Movete como si cada esquina tuviera a alguien.</li>
+        </ul>
         <div class="call"><span class="k">Humo y granadas</span><p>Humos de ataque para cubrir el avance; en defensa no. Proactividad con las granadas: en CQB una bien tirada resuelve un cuarto entero.</p></div>
         <!-- CLIP: limpiar un cuarto con granada + entrada -->
         <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — limpiar cuarto</span><span>media/cqb-cuarto.webm · loop</span></div></div><figcaption class="cap"><b>FIG 08.1</b> Granada, entrada, siguiente pieza.</figcaption></figure>
