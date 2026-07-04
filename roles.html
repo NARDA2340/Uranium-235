@@ -46,6 +46,7 @@
         <span><i style="background:var(--cmd)"></i>Comandancia</span>
         <span><i style="background:var(--sup)"></i>Soporte</span>
         <span><i style="background:var(--cho)"></i>Choque</span>
+        <span><i style="background:var(--arm)"></i>Blindados</span>
       </div>
       <p class="wheel-hint">Clic en un tipo → se despliegan sus clases. En celular, tocá una clase para ver la info y tocá de nuevo para abrir su página.</p>
     </div>
@@ -117,6 +118,11 @@ const TYPES=[
     {s:"mg",n:"Ametrallador",i:"mg.png",d:"Supresión pura. Nunca fijo: tirá, suprimí y rotá. Sin bípode no apunta; la posición lo es todo."},
     {s:"fusilero",n:"Fusilero",i:"rifleman.png",d:"La clase base para aprender a moverse. Tira cajas de munición para reponer a la escuadra."},
     {s:"antitanque",n:"Anti tanque",i:"antitank.png",d:"Ofensivo: caza blindados por flanco o retaguardia. Al pesado nunca de frente. Gastá la munición."}
+  ]},
+  {id:"blindados",name:"Blindados",c:"var(--arm)",icon:"tank_cmd.png",desc:"Los fierros. Tripulación de tres: cada puesto con su laburo.",classes:[
+    {s:"tank-cmd",n:"Comandante de tanque",i:"tank_cmd.png",d:"Llama los tiros con binoculares. Decide posiciones hull-down y cuándo entrar o salir."},
+    {s:"artillero",n:"Artillero",i:"tank_crew.png",d:"Opera el cañón. Menos zoom, torreta más rápida; más zoom, más precisión. Apuntá a orugas y laterales."},
+    {s:"conductor",n:"Conductor",i:"tank_crew.png",d:"Maneja y reposiciona. Nunca exponer laterales ni retaguardia. La movilidad gana el duelo."}
   ]}
 ];
 const wheel=document.getElementById('wheel'), core=document.getElementById('core'), back=document.getElementById('back');
