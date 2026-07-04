@@ -159,8 +159,10 @@ img{max-width:100%}
    =================================================================== */
 .hub{min-height:100vh;position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;padding:clamp(30px,6vh,70px) clamp(18px,5vw,54px) 50px}
 .hub-brand{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
-.hub-brand .mark{width:74px;height:74px;border-radius:50%;border:2px solid var(--amber);overflow:hidden;background:#0e0f0a}
+.hub-brand .mark{width:clamp(170px,30vw,270px);height:clamp(170px,30vw,270px);border-radius:50%;border:3px solid var(--amber);overflow:hidden;background:#0e0f0a;animation:float 3.6s ease-in-out infinite alternate;filter:drop-shadow(0 18px 34px rgba(0,0,0,.5)) drop-shadow(0 0 26px rgba(201,154,46,.16))}
 .hub-brand .mark img{width:100%;height:100%;object-fit:cover;display:block}
+@keyframes float{from{transform:translateY(6px)}to{transform:translateY(-14px)}}
+@media (prefers-reduced-motion:reduce){.hub-brand .mark{animation:none}}
 .hub-brand small{font-family:var(--f-type);font-size:11px;letter-spacing:.22em;color:var(--tan-dim);text-transform:uppercase}
 .hub-brand h1{font-size:clamp(40px,8vw,86px);text-transform:uppercase;color:var(--amber);letter-spacing:-.01em;line-height:.95}
 .hub-brand .tagline{max-width:56ch;color:var(--tan-dim);font-family:var(--f-type);font-size:13px;letter-spacing:.04em;line-height:1.6}
