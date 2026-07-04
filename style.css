@@ -211,7 +211,7 @@ img{max-width:100%}
 .wheel-core .core-info .cta{display:block;margin-top:8px;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
 
 /* Nodos de rol */
-.node{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;border-radius:50%;background:#0e0f0a;border:2px solid var(--nc,var(--line));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;transition:transform .16s,box-shadow .16s,background .16s;z-index:1}
+.node{position:absolute;left:50%;top:50%;width:74px;height:74px;margin:-37px 0 0 -37px;padding:0;font:inherit;color:inherit;cursor:pointer;-webkit-appearance:none;appearance:none;border-radius:50%;background:#0e0f0a;border:2px solid var(--nc,var(--line));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;transition:transform .16s,box-shadow .16s,background .16s;z-index:1}
 .node img{width:34px;height:34px;object-fit:contain}
 .node .lbl{font-family:var(--f-type);font-size:7.5px;letter-spacing:.02em;color:var(--tan-dim);text-transform:uppercase;line-height:1;max-width:66px;padding:0 2px}
 .node:hover,.node:focus{transform:scale(1.14);background:var(--surface-2);box-shadow:0 0 0 4px rgba(201,154,46,.14);z-index:3;outline:none}
@@ -227,3 +227,18 @@ img{max-width:100%}
   .node img{width:26px;height:26px}
   .node .lbl{font-size:6.5px;max-width:52px}
 }
+
+/* ===== Rueda 2 niveles: burbuja, volver, nodo de tipo ===== */
+.node.type{width:98px;height:98px;margin:-49px 0 0 -49px;border-width:2.5px}
+.node.type img{width:42px;height:42px}
+.node.type .lbl{font-size:9px;max-width:86px;color:var(--tan)}
+.node .bubble{position:absolute;top:50%;transform:translateY(-50%);white-space:nowrap;background:var(--surface-2);border:1px solid var(--nc,var(--amber));color:var(--tan);font-family:var(--f-type);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;padding:6px 10px;border-radius:3px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:6;box-shadow:0 6px 16px rgba(0,0,0,.55)}
+.node .bubble::after{content:"";position:absolute;top:50%;margin-top:-6px;border:6px solid transparent}
+.node.rt .bubble{left:calc(100% + 12px)}
+.node.rt .bubble::after{right:100%;border-right-color:var(--nc,var(--amber))}
+.node.lf .bubble{right:calc(100% + 12px)}
+.node.lf .bubble::after{left:100%;border-left-color:var(--nc,var(--amber))}
+.node:hover .bubble,.node:focus .bubble{opacity:1}
+.wheel-back{margin-top:18px;background:none;border:1px solid var(--line);color:var(--tan-dim);font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:6px 14px;border-radius:2px;cursor:pointer;transition:.15s}
+.wheel-back:hover{color:var(--amber);border-color:var(--amber);background:var(--surface-2)}
+.wheel-back[hidden]{display:none}
