@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Reglas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="top">
+  <a class="back" href="index.html"><span class="m"><img src="media/logo-mark.png" alt=""></span>← Volver al inicio</a>
+  <span class="brand">Uranium 235 · Reglas</span>
+</div>
+
+<div class="wrap">
+  <header class="page-hero reveal">
+    <div class="ord-stamp">07</div>
+    <p class="eyebrow">07 · Apartado</p>
+    <h1>Reglas</h1>
+    <p class="sub">Rulesets competitivos. Resumen según comp-hll.org. Algunas todavía no están publicadas; ese espacio queda reservado.</p>
+  </header>
+
+  <section class="block">
+    <div class="block-body">
+      <div class="rule-block pending">
+        <h3>18 vs 18</h3>
+        <p class="fmt">FORMATO · WARFARE MODIFICADO</p>
+        <p>Comp-HLL tiene un ruleset propio de 18v18, pero todavía figura como "coming soon": los detalles no están publicados. Cuando salga, va acá.</p>
+        <p class="src">Fuente: comp-hll.org — 18v18 Ruleset (aún sin publicar).</p>
+      </div>
+      <div class="rule-block">
+        <h3>36 vs 36</h3>
+        <p class="fmt">FORMATO · SKIRMISH (LARGE-SCALE)</p>
+        <p>Entra dentro del ruleset de Skirmish. Duración 30 minutos; gana quien controla más tiempo el punto y, si empatan, desempata por kills.</p>
+        <p>Armor: máximo <b>un tanque mediano</b> y <b>una tripulación</b> por equipo. <b>Artillery Strike no se permite</b>. Los nodos se construyen dentro de los sectores de HQ y <b>no se destruyen</b> los del rival. Romper esas reglas es forfeit.</p>
+        <p class="src">Fuente: comp-hll.org — Competitive Skirmish Ruleset.</p>
+      </div>
+      <div class="rule-block">
+        <h3>49 vs 49</h3>
+        <p class="fmt">FORMATO · WARFARE — OJO: ES 49v49, NO 50v50</p>
+        <p>El formato grande de Warfare es 49 por lado. Duración 90 minutos; se gana con un 5-0 (victoria inmediata) o con la mayoría (3-2 o mejor) al final.</p>
+        <p>Por default no se permiten el <b>tanque pesado tope de gama</b> ni el <b>Artillery Strike</b>. Un solo artillero designado usa un cañón en HQ toda la partida. Hay variantes por acuerdo mutuo. Nodos igual que en Skirmish.</p>
+        <p class="src">Fuente: comp-hll.org — Competitive Warfare Ruleset.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="page-foot">Uranium 235 · Reglas · v0.5 — se sigue trabajando.</div>
+</div>
+
+<script>
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>

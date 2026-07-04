@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Comunicación</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="top">
+  <a class="back" href="index.html"><span class="m"><img src="media/logo-mark.png" alt=""></span>← Volver al inicio</a>
+  <span class="brand">Uranium 235 · Comunicación</span>
+</div>
+
+<div class="wrap">
+  <header class="page-hero reveal">
+    <div class="ord-stamp">04</div>
+    <p class="eyebrow">04 · Apartado</p>
+    <h1>Comunicación</h1>
+    <p class="sub">El equipo informado resuelve. Es lo que más peso tiene: como oficial dependo de que me llegue la info a tiempo.</p>
+  </header>
+
+  <section class="block">
+    <div class="block-body">
+      <p>Si ves infantería filtrándose —por ejemplo metiéndose por el sur— avisá al toque a tu oficial o al que tengas al lado. Una marca en el mapa + "se meten por el sur" a tiempo <b>salva el punto</b>.</p>
+      <div class="call">
+        <span class="k">Dato clave de marcas</span>
+        <p>El líder de escuadra ve <b>todas</b> las marcas del mapa, pero tu escuadra solo ve las que él coloca. Marcar no es opcional: si no lo pasás a la marca, para tu escuadra no existe.</p>
+      </div>
+      <ul class="blist">
+        <li><b>Avisá al toque:</b> una filtración cantada a tiempo vale más que diez kills.</li>
+        <li><b>Marca + voz</b> juntas: la marca ubica, la voz explica qué está pasando.</li>
+        <li>Si sos SL, <b>pasá las marcas</b> a tu escuadra: lo que no marcás, para ellos no existe.</li>
+      </ul>
+      <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — marcar filtración</span><span>media/marca-filtracion.webm · loop</span></div></div><figcaption class="cap"><b>FIG 04.1</b> Marca + voz, a tiempo.</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="page-foot">Uranium 235 · Comunicación · v0.5 — se sigue trabajando.</div>
+</div>
+
+<script>
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>

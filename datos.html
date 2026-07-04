@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Datos no negociables</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="top">
+  <a class="back" href="index.html"><span class="m"><img src="media/logo-mark.png" alt=""></span>← Volver al inicio</a>
+  <span class="brand">Uranium 235 · Datos no negociables</span>
+</div>
+
+<div class="wrap">
+  <header class="page-hero reveal">
+    <div class="ord-stamp">06</div>
+    <p class="eyebrow">06 · Apartado</p>
+    <h1>Datos no negociables</h1>
+    <p class="sub">Números y mecánicas para tener siempre en la cabeza. Lo que no se discute.</p>
+  </header>
+
+  <section class="block">
+    <div class="block-body">
+      <div class="call"><span class="k">El ~90%</span><p>Ganar en HLL es matar garrisons enemigos. Si te revientan siempre desde el mismo lado, no es el aim: hay una garry u OP cerca. Mandamos 2–3 a buscarlo.</p></div>
+      <table class="readout">
+        <caption>Alertas del mapa por proximidad</caption>
+        <thead><tr><th>Zona</th><th>Alerta visual (exclamación)</th><th>Bloqueo absoluto (spawn desactivado)</th></tr></thead>
+        <tbody>
+          <tr><th class="zone-blue">Azul (propia)</th><td>Enemigo a menos de <b>50 m</b></td><td>Enemigo a menos de <b>15 m</b></td></tr>
+          <tr><th class="zone-red">Roja (enemiga)</th><td>No avisa <small>(pasa directo a bloqueo)</small></td><td>Enemigo a menos de <b>100 m</b></td></tr>
+        </tbody>
+      </table>
+      <ul class="blist">
+        <li><b>Regla de los 200 m:</b> dos garrisons no pueden estar a menos de 200 m entre sí. Para medirlo a ojo, con el mapa en zoom out cada cuadrado grande es de 200×200 m.</li>
+        <li>No se pueden construir más de <b>dos sectores rojos</b> dentro del territorio enemigo.</li>
+        <li><b>Smoke al cruzar</b> calles abiertas, en las dos direcciones: cruzar sin humo es regalar la cabeza.</li>
+        <li>Humos <b>de ataque</b>, nunca en defensa.</li>
+        <li><b>FOV</b> al 90% o más si tu PC lo banca.</li>
+      </ul>
+      <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — regla 200 m</span><span>media/regla-200m.jpg</span></div></div><figcaption class="cap"><b>FIG 06.1</b> El cuadrado del mapa = 200 m.</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="page-foot">Uranium 235 · Datos no negociables · v0.5 — se sigue trabajando.</div>
+</div>
+
+<script>
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>

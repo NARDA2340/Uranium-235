@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Estrategias</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="top">
+  <a class="back" href="index.html"><span class="m"><img src="media/logo-mark.png" alt=""></span>← Volver al inicio</a>
+  <span class="brand">Uranium 235 · Estrategias</span>
+</div>
+
+<div class="wrap">
+  <header class="page-hero reveal">
+    <div class="ord-stamp">03</div>
+    <p class="eyebrow">03 · Apartado</p>
+    <h1>Estrategias</h1>
+    <p class="sub">Leer la jugada en el mapa, el arranque, y qué hacer después del punto medio.</p>
+  </header>
+
+  <section class="block">
+    <p class="block-tag">Leer el stratsketch</p>
+    <h2>El mapa con la jugada encima <span class="wip">Work in progress</span></h2>
+    <p class="sub">Banderas, garrisons, posiciones de tanque y rutas. Todo codificado por el color de tu grupo.</p>
+    <div class="block-body">
+      <div class="rule-block pending">
+        <p class="fmt">EN PREPARACIÓN</p>
+        <p>El contenido y las imágenes de esta sección se cargan más adelante.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="block-tag">Aperturas</p>
+    <h2>El arranque</h2>
+    <p class="sub">El primer minuto marca el tono de toda la partida.</p>
+    <div class="block-body">
+      <p>La <b>apertura</b> es una de las partes más importantes del partido: marca el tono y puede condicionar todo lo que sigue, según el mapa y cómo estén repartidos los puntos. A veces hay más de una apertura posible para el mismo punto intermedio, dependiendo de cuál termine siendo el segundo punto —eso mueve tu spawn inicial y qué camión tomás—. Prestale atención a la distribución de puntos: en el ejemplo de SME, la apertura depende de si se agarra la batería de artillería o el cementerio/crique, y por eso INF3 se divide y las banderas de FLEX e INF1 se mueven.</p>
+      <figure class="shot"><a href="media/premarch/apertura-ejemplo-1.png" target="_blank" rel="noopener"><img src="media/premarch/apertura-ejemplo-1.png" alt="Ejemplo de apertura, primera variante" loading="lazy"></a><figcaption class="cap"><b>FIG 03.1</b> Apertura, variante según punto disputado.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
+      <figure class="shot"><a href="media/premarch/apertura-ejemplo-2.png" target="_blank" rel="noopener"><img src="media/premarch/apertura-ejemplo-2.png" alt="Misma apertura con otra distribución de puntos" loading="lazy"></a><figcaption class="cap"><b>FIG 03.2</b> Misma apertura, otra distribución de puntos.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="block">
+    <p class="block-tag">Desarrollo de la partida</p>
+    <h2>Después del arranque: 3-2 y 2-3</h2>
+    <p class="sub">Lo que viene depende de si ganás o perdés el punto medio.</p>
+    <div class="block-body">
+      <ul class="blist">
+        <li><b>3-2:</b> tomaste el punto medio. El plan apunta al segundo punto del rival.</li>
+        <li><b>2-3:</b> lo perdiste. El plan es empujar desde tu segundo punto de vuelta al medio.</li>
+        <li>A veces no hay esquema 3-2 para el siguiente punto porque está demasiado lejos: se sostiene el 3-2 tal cual, salvo que <b>FLEX</b> abra una ventana para pasar a 4-1.</li>
+      </ul>
+      <p>En estos esquemas los grupos de INF ya no tienen banderas de OP puntuales: tienen <b>bloques de color</b>. Cada bloque es el área de responsabilidad de ese grupo —defenderla o empujarla, según toque—, porque a esta altura es imposible predecir dónde va a estar cada uno. Los recuadros y círculos verdes son las zonas de la defensa; en 3-2 las garrisons son responsabilidad de todos, pero en la práctica las termina armando la defensa. También vas a ver banderas de recon y OPs flex sueltas por el mapa.</p>
+      <figure class="shot"><a href="media/premarch/esquema-3-2.png" target="_blank" rel="noopener"><img src="media/premarch/esquema-3-2.png" alt="Esquema 3-2 con bloques de color" loading="lazy"></a><figcaption class="cap"><b>FIG 03.3</b> Bloques de color = zona de responsabilidad, no OP fijo.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
+    </div>
+  </section>
+
+  <div class="page-foot">Uranium 235 · Estrategias · v0.5 — se sigue trabajando.</div>
+</div>
+
+<script>
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Proactividad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div class="top">
+  <a class="back" href="index.html"><span class="m"><img src="media/logo-mark.png" alt=""></span>← Volver al inicio</a>
+  <span class="brand">Uranium 235 · Proactividad</span>
+</div>
+
+<div class="wrap">
+  <header class="page-hero reveal">
+    <div class="ord-stamp">05</div>
+    <p class="eyebrow">05 · Apartado</p>
+    <h1>Proactividad</h1>
+    <p class="sub">No dependas de que te den nada. Esto separa la buena partida de la mala.</p>
+  </header>
+
+  <section class="block">
+    <div class="block-body">
+      <ul class="blist">
+        <li><b>Soporte:</b> cada vez que volvés de morir, tirá caja donde haga falta, sin que te la pidan.</li>
+        <li><b>Abrí el mapa cada 5–10–15 segundos</b>, todo el tiempo: es el hábito número uno. Ahí ves enemigos marcados, OPs propios cayendo y filtraciones.</li>
+        <li>Cubrí edificios y rotá adentro; <b>no se amontonen</b> en una sola pieza: un misil los borra a todos juntos.</li>
+        <li>Si caen los OPs de tus oficiales, el que pueda los <b>repone</b>, aunque sea una cuadra más atrás.</li>
+        <li>Marcá garrys y OPs <b>enemigos</b>: si viene gente una y otra vez, asumí que hay un spawn y comunicalo. Si confirmás que es OP, aseguralo con granada.</li>
+      </ul>
+      <div class="call"><span class="k">Regla de OPs</span><p>Un OP mal puesto es mil veces mejor que no tener ninguno. Si no, roten al garry o al OP que quede mejor posicionado.</p></div>
+      <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — red de spawns</span><span>media/red-spawns.jpg</span></div></div><figcaption class="cap"><b>FIG 05.1</b> Repartir la red, no amontonar.</figcaption></figure>
+    </div>
+  </section>
+
+  <div class="page-foot">Uranium 235 · Proactividad · v0.5 — se sigue trabajando.</div>
+</div>
+
+<script>
+const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
+</script>
+</body>
+</html>

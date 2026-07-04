@@ -3,603 +3,91 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>URANIUM 235 — Manual HLL</title>
-
+<title>URANIUM 235 — Manual de combate</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
-
-<style>
-:root{
-  --bg:#141009; --surface:#1e1810; --surface-2:#282013; --line:#5a4d2a; --line-dim:#3a3016;
-  --tan:#dccfb0; --tan-dim:#9c8e6c; --amber:#c99a2e; --amber-hi:#e6bc55;
-  --red:#b0432f; --green-op:#6f8a3f; --stamp:rgba(220,207,176,.05);
-  --paper:#e7e0cd; --paper-ink:#2a2414;
-
-  /* colores por tipo de rol */
-  --cmd:#e0b64a;  /* comandancia */
-  --sup:#96a652;  /* soporte */
-  --cho:#c65a3c;  /* choque */
-
-  --f-display:"Zilla Slab",Georgia,serif;
-  --f-body:"Zilla Slab",Georgia,serif;
-  --f-mono:"Space Mono",ui-monospace,monospace;
-  --f-type:"Special Elite",var(--f-mono);
-  --sidebar:272px;
-}
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--tan);font-family:var(--f-body);font-size:17px;line-height:1.62;-webkit-font-smoothing:antialiased}
-body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:radial-gradient(circle at 50% -10%,rgba(201,154,46,.07),transparent 55%),radial-gradient(circle at 88% 92%,rgba(111,138,63,.04),transparent 45%),repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 1px,transparent 1px 3px)}
-a{color:var(--amber);text-decoration:none}
-h1,h2,h3{font-family:var(--f-display);font-weight:600;line-height:1.04;margin:0}
-.shell{display:flex;min-height:100vh;position:relative;z-index:1}
-
-/* Sidebar */
-.side{width:var(--sidebar);flex:0 0 var(--sidebar);position:sticky;top:0;align-self:flex-start;height:100vh;border-right:1px solid var(--line);background:linear-gradient(180deg,var(--surface),var(--bg));padding:24px 20px;display:flex;flex-direction:column;gap:24px}
-.brand{display:flex;align-items:center;gap:12px}
-.brand .mark{width:46px;height:46px;flex:0 0 46px;border-radius:50%;border:2px solid var(--amber);overflow:hidden;background:#0e0f0a}
-.brand .mark img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}
-.brand .who small{font-family:var(--f-type);font-size:10px;letter-spacing:.18em;color:var(--tan-dim);display:block}
-.brand .who strong{font-family:var(--f-display);font-weight:700;letter-spacing:.05em;font-size:20px;color:var(--tan)}
-.nav{display:flex;flex-direction:column;gap:2px;margin-top:2px}
-.nav a{display:flex;align-items:baseline;gap:12px;padding:9px 10px;color:var(--tan-dim);border-left:2px solid transparent;font-family:var(--f-display);font-weight:500;letter-spacing:.05em;text-transform:uppercase;font-size:14px;transition:.18s}
-.nav a .ord{font-family:var(--f-mono);font-size:11px;color:var(--line)}
-.nav a:hover{color:var(--tan);background:var(--surface-2)}
-.nav a.active{color:var(--amber-hi);border-left-color:var(--amber);background:var(--surface-2)}
-.nav a.active .ord{color:var(--amber)}
-.nav a.special{margin-top:14px;border-top:1px solid var(--amber);padding-top:15px;color:var(--amber-hi)}
-.nav a.special:hover{background:var(--surface-2);color:var(--amber-hi)}
-.nav a.special .ord{color:var(--amber)}
-.nav a.special .t{display:flex;flex-direction:column;gap:2px}
-.nav a.special .t b{font-family:var(--f-mono);font-weight:400;font-size:9.5px;letter-spacing:.08em;color:var(--tan-dim);text-transform:none}
-.side .foot{margin-top:auto;font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;line-height:1.7}
-
-/* Main */
-.main{flex:1 1 auto;min-width:0;max-width:940px;margin:0 auto;padding:0 clamp(20px,5vw,64px)}
-
-/* Hero */
-.hero{padding:88px 0 60px;border-bottom:1px solid var(--line)}
-.hero .eyebrow{font-family:var(--f-type);font-size:13px;letter-spacing:.06em;color:var(--amber);text-transform:none;max-width:60ch}
-.hero h1{font-size:clamp(28px,4.3vw,48px);font-weight:700;text-transform:uppercase;letter-spacing:-.01em;margin:14px 0 0;color:var(--amber);white-space:nowrap}
-.hero .lede{max-width:56ch;margin-top:22px;color:var(--tan);font-size:19px}
-.hero .doctrine{margin-top:30px;padding:16px 20px;border-left:3px solid var(--amber);background:var(--surface);font-family:var(--f-display);font-weight:500;font-size:20px;letter-spacing:.01em}
-.hero .mandate{position:relative;margin-top:26px;padding:20px 22px;background:var(--paper);color:var(--paper-ink);max-width:66ch;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-.hero .mandate::before,.hero .mandate::after{content:"";position:absolute;width:16px;height:16px;border:2px solid var(--paper-ink);opacity:.5}
-.hero .mandate::before{top:6px;left:6px;border-right:0;border-bottom:0}
-.hero .mandate::after{bottom:6px;right:6px;border-left:0;border-top:0}
-.hero .mandate .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#7a5a1e;display:block;margin-bottom:6px}
-.hero .mandate p{margin:0;font-family:var(--f-type);font-size:15px;line-height:1.7;letter-spacing:.01em;color:var(--paper-ink)}
-
-/* Section */
-.sec{padding:70px 0;border-bottom:1px solid var(--line);position:relative}
-.sec>.ord-stamp{position:absolute;right:-6px;top:38px;font-family:var(--f-type);font-size:120px;color:var(--stamp);pointer-events:none;user-select:none;z-index:0}
-.sec-head{position:relative;z-index:1;margin-bottom:8px}
-.sec-head .tag{display:flex;align-items:center;gap:14px;font-family:var(--f-type);font-size:12px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase}
-.sec-head .tag::after{content:"";flex:1;height:0;border-top:1px dashed var(--line)}
-.sec-head h2{font-size:clamp(34px,5.5vw,54px);text-transform:uppercase;font-weight:700;margin-top:8px}
-.sec-head .sub{color:var(--tan-dim);margin-top:10px;max-width:62ch}
-.sec-body{position:relative;z-index:1}
-.sec-body p{max-width:66ch}
-
-/* Tipos de rol */
-.rtype{margin:36px 0}
-.rtype-head{display:flex;align-items:center;gap:12px;margin-bottom:2px;padding-bottom:10px;border-bottom:2px solid var(--c)}
-.rtype-head .sq{width:13px;height:13px;background:var(--c);flex:0 0 13px}
-.rtype-head h3{font-size:22px;text-transform:uppercase;letter-spacing:.09em;color:var(--c)}
-.rtype-head .n{margin-left:auto;font-family:var(--f-mono);font-size:11px;color:var(--tan-dim);letter-spacing:.1em}
-
-/* Fila de rol: ícono + texto */
-.rrow{display:flex;gap:18px;padding:18px 0;border-bottom:1px solid rgba(74,78,51,.45);align-items:flex-start}
-.rrow .ic{width:60px;height:60px;flex:0 0 60px;display:grid;place-items:center;border:1.5px solid var(--c,var(--line));border-radius:50%;background:#0e0f0a;overflow:hidden}
-.rrow .ic img{width:60%;height:60%;object-fit:contain;display:block;margin:auto}
-
-/* Conector tipo organigrama entre familias de rol */
-.flow-arrow{display:flex;justify-content:center;align-items:center;padding:4px 0}
-.flow-arrow i{display:block;width:2px;height:38px;background:linear-gradient(var(--line),var(--amber));position:relative}
-.flow-arrow i::after{content:"";position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);border:7px solid transparent;border-top-color:var(--amber)}
-.rrow .rc{min-width:0}
-.rrow .rc h4{font-family:var(--f-display);font-weight:600;font-size:21px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin:0 0 3px}
-.rrow .rc h4 .flag{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;color:var(--c);margin-left:10px;vertical-align:middle}
-.rrow .rc p{margin:.3em 0;max-width:64ch}
-.rrow .rc .improve{display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--amber);border:1px solid rgba(217,138,43,.4);padding:4px 10px;border-radius:2px;transition:.15s}
-.rrow .rc .improve:hover{color:#0e0f0a;background:var(--amber);border-color:var(--amber)}
-
-/* Referencia por tipo (espacio reservado) */
-.ref{border:1px dashed var(--c);background:var(--surface);padding:14px 16px;margin:16px 0 0;display:flex;gap:14px;align-items:center}
-.ref .tagx{font-family:var(--f-type);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--c);flex:0 0 auto}
-.ref p{margin:0;font-family:var(--f-mono);font-size:12.5px;color:var(--tan-dim);letter-spacing:.02em}
-
-/* Callouts */
-.call{border-left:3px solid var(--amber);background:var(--surface);padding:14px 18px;margin:20px 0;max-width:66ch}
-.call.warn{border-left-color:var(--red)}
-.call.core{border-left-color:var(--green-op);background:var(--surface-2)}
-.call .k{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:4px}
-.call.warn .k{color:var(--red)} .call.core .k{color:var(--green-op)}
-.call p{margin:0;max-width:none}
-
-/* Media */
-.fig{margin:22px auto;border:1px solid var(--line);background:#0e0f0a;max-width:720px}
-.fig .frame{position:relative;aspect-ratio:16/9;overflow:hidden;background:var(--surface)}
-.fig .frame video,.fig .frame img{width:100%;height:100%;object-fit:cover;display:block}
-.fig .placeholder{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:8px;color:var(--tan-dim);font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;background:repeating-linear-gradient(45deg,transparent 0 14px,rgba(74,78,51,.14) 14px 15px)}
-.fig .placeholder .big{font-family:var(--f-display);font-size:15px;letter-spacing:.08em;color:var(--tan);text-transform:uppercase}
-.fig .cap{display:flex;gap:10px;padding:9px 12px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);letter-spacing:.03em}
-.fig .cap b{color:var(--amber);font-weight:700}
-
-/* Imagen real (captura/diagrama): se muestra completa, sin recorte, clic para ampliar */
-.shot{margin:22px auto;border:1px solid var(--line);background:#12130d;max-width:820px}
-.shot a{display:block;padding:12px;background:#1a1c12;line-height:0;text-align:center;cursor:zoom-in;transition:background .18s}
-.shot a:hover{background:#20221733}
-.shot img{max-width:100%;max-height:620px;width:auto;height:auto;display:inline-block;vertical-align:top;border:1px solid rgba(74,78,51,.5)}
-.shot .cap{display:flex;flex-wrap:wrap;gap:6px 10px;padding:9px 12px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);letter-spacing:.03em;line-height:1.5}
-.shot .cap b{color:var(--amber);font-weight:700}
-.shot .cap .zoom{margin-left:auto;color:var(--tan-dim);opacity:.75}
-
-/* Tabla */
-.readout{width:100%;border-collapse:collapse;margin:24px 0;font-size:14px;max-width:none}
-.readout caption{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);text-align:left;padding-bottom:10px}
-.readout th,.readout td{border:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
-.readout thead th{background:var(--surface-2);font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;font-weight:600;color:var(--tan)}
-.readout tbody th{font-family:var(--f-display);font-weight:600;background:var(--surface)}
-.readout td small{font-family:var(--f-mono);color:var(--tan-dim);font-size:11px}
-.zone-blue{color:#8fb0d6} .zone-red{color:#d68a8a}
-
-/* Reglas */
-.rule-block{border:1px solid var(--line);background:var(--surface);padding:20px 22px;margin:20px 0}
-.rule-block h3{font-size:22px;text-transform:uppercase;letter-spacing:.03em;color:var(--tan);margin-bottom:4px}
-.rule-block .fmt{font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);letter-spacing:.05em;margin-bottom:12px}
-.rule-block p{margin:.5em 0}
-.rule-block.pending{border-style:dashed;opacity:.85}
-.rule-block.pending .fmt{color:var(--amber)}
-.src{font-family:var(--f-mono);font-size:12px;color:var(--tan-dim);margin-top:6px}
-
-/* Reveal */
-.reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
-.reveal.in{opacity:1;transform:none}
-
-/* Mobile */
-.side .toggle{display:none}
-@media (max-width:900px){
-  .shell{flex-direction:column}
-  .side{width:100%;height:auto;position:sticky;top:0;z-index:20;flex-direction:row;align-items:center;justify-content:space-between;padding:12px 16px;gap:12px;border-right:none;border-bottom:1px solid var(--line)}
-  .side .brand{flex:1}
-  .nav{position:absolute;top:100%;left:0;right:0;background:var(--surface);border-bottom:1px solid var(--line);padding:8px 12px 14px;display:none}
-  .nav.open{display:flex}
-  .side .foot{display:none}
-  .side .toggle{display:inline-flex;align-items:center;gap:8px;background:none;border:1px solid var(--line);color:var(--tan);font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;padding:8px 12px;cursor:pointer}
-  .main{max-width:100%}
-  .hero{padding:48px 0 40px}
-  .hero h1{white-space:normal;font-size:clamp(26px,7vw,40px)}
-  .sec>.ord-stamp{font-size:82px;top:18px}
-  .ref{flex-direction:column;align-items:flex-start;gap:6px}
-}
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.reveal{opacity:1;transform:none;transition:none}}
-
-/* ===== Motivos "expediente" ===== */
-/* Sello estampado */
-.stamp{display:inline-block;margin-top:26px;padding:7px 16px;border:2px solid var(--red);color:var(--red);font-family:var(--f-type);font-size:13px;letter-spacing:.18em;text-transform:uppercase;transform:rotate(-3deg);opacity:.9}
-.stamp.ok{border-color:var(--green-op);color:var(--green-op)}
-
-/* Corchetes de esquina en tarjetas (dossier) */
-.rule-block{position:relative}
-.rule-block::before,.rule-block::after{content:"";position:absolute;width:15px;height:15px;border:2px solid var(--amber);opacity:.55;pointer-events:none}
-.rule-block::before{top:-1px;left:-1px;border-right:0;border-bottom:0}
-.rule-block::after{bottom:-1px;right:-1px;border-left:0;border-top:0}
-
-/* Listas por puntos (texto reescrito) */
-.blist{list-style:none;margin:14px 0;padding:0;display:flex;flex-direction:column;gap:9px;max-width:66ch}
-.blist li{position:relative;padding-left:22px}
-.blist li::before{content:"▸";position:absolute;left:0;top:0;color:var(--amber);font-size:14px}
-.blist li b{color:var(--tan)}
-.blist.warn li::before{color:var(--red)}
-.blist.ok li::before{color:var(--green-op)}
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-<div class="shell">
+<main class="hub">
 
-  <aside class="side">
-    <div class="brand">
-      <div class="mark"><img src="media/logo-mark.png" alt="Uranium 235"></div>
-      <div class="who"><small>HELL LET LOOSE</small><strong>URANIUM 235</strong></div>
-    </div>
-    <nav class="nav" id="nav">
-      <a href="#roles"><span class="ord">00</span> Roles</a>
-      <a href="#prematch"><span class="ord">01</span> Pre-match</a>
-      <a href="#roster"><span class="ord">02</span> Leer el roster</a>
-      <a href="#stratsketch"><span class="ord">03</span> Leer el stratsketch</a>
-      <a href="#aperturas"><span class="ord">04</span> Aperturas y 3-2/2-3</a>
-      <a href="#comunicacion"><span class="ord">05</span> Comunicación</a>
-      <a href="#proactividad"><span class="ord">06</span> Proactividad</a>
-      <a href="#datos"><span class="ord">07</span> Datos duros</a>
-      <a href="#infanteria"><span class="ord">08</span> Gameplay Infantería</a>
-      <a href="#tanquista"><span class="ord">09</span> Gameplay Tanquista</a>
-      <a href="#reglas"><span class="ord">10</span> Reglas</a>
-      <a class="special" href="mejorar.html" target="_blank" rel="noopener"><span class="ord">↗</span><span class="t">Cómo mejorar<b>tutoriales · abre aparte</b></span></a>
-    </nav>
-    <button class="toggle" id="toggle">MENÚ ▾</button>
-    <div class="foot">DOC. INTERNO<br>v0.4 · BORRADOR</div>
-  </aside>
+  <div class="hub-brand">
+    <div class="mark"><img src="media/logo-mark.png" alt="Uranium 235"></div>
+    <small>Hell Let Loose · Destacamento LATAM</small>
+    <h1>Uranium 235</h1>
+    <p class="tagline">Manual de combate. Guía paso a paso para jugar con perfil competitivo. Está sujeto a mejoras: cada actualización se comunica en los canales del clan por Discord.</p>
+    <div class="stamp">Documento interno · Clasificado</div>
+  </div>
 
-  <main class="main">
+  <div class="hub-rule">Elegí un apartado para profundizar</div>
 
-    <header class="hero reveal">
-      <p class="eyebrow">Guía paso a paso de cómo jugar con URANIUM 235 con un perfil competitivo.</p>
-      <h1>Ganar es trabajar juntos</h1>
-      <p class="lede">La base táctica del clan, ordenada como recorrido. No es un dogma: es lo que nos funciona. Está sujeto a mejoras: cada actualización se comunica en los canales del clan por Discord.</p>
-      <div class="doctrine">"La información bien transmitida y ser consciente de lo que estás haciendo es lo que necesitamos para ganar."</div>
-      <div class="mandate"><span class="k">Lectura obligatoria</span><p>Este contenido tiene que ser recorrido por todas y todos los miembros del clan. El conocimiento del manual se tiene —y se va a reflejar— en el rendimiento del equipo.</p></div>
-      <div class="stamp">Documento interno · Clasificado</div>
-    </header>
+  <nav class="hub-grid">
 
-    <!-- ==================== 00 · ROLES ==================== -->
-    <section class="sec" id="roles">
-      <div class="ord-stamp">00</div>
-      <div class="sec-head reveal">
-        <p class="tag">00 · Roles</p>
-        <h2>No se negocian</h2>
-        <p class="sub">Divididos por tipo. Cada rol con su ícono; el color marca a qué familia pertenece: comandancia, soporte o choque.</p>
-      </div>
+    <a class="hub-card" href="roles.html">
+      <span class="go">↗</span>
+      <span class="num">01 · Apartado</span>
+      <h2>Roles</h2>
+      <p class="desc">Las clases y qué hace cada una. Sistema circular: pasá el mouse para ver características, clic para su "Cómo mejorar".</p>
+      <div class="chips"><span>Roles</span><span class="wip">Gameplay Infantería · WIP</span><span class="wip">Gameplay Tanquista · WIP</span></div>
+    </a>
 
-      <div class="sec-body">
+    <a class="hub-card" href="preparacion.html">
+      <span class="go">↗</span>
+      <span class="num">02 · Apartado</span>
+      <h2>Preparación de partidas</h2>
+      <p class="desc">La capa macro previa al spawn: cómo se arma el partido antes de tocar Ready.</p>
+      <div class="chips"><span class="wip">Pre-match · WIP</span><span>Leer el roster</span></div>
+    </a>
 
-        <!-- ---------- COMANDANCIA ---------- -->
-        <div class="rtype" style="--c:var(--cmd)">
-          <div class="rtype-head"><span class="sq"></span><h3>Comandancia</h3><span class="n">dirige · ve el tablero</span></div>
+    <a class="hub-card" href="estrategias.html">
+      <span class="go">↗</span>
+      <span class="num">03 · Apartado</span>
+      <h2>Estrategias</h2>
+      <p class="desc">Leer la jugada en el mapa, el arranque y qué hacer después del punto medio.</p>
+      <div class="chips"><span class="wip">Stratsketch · WIP</span><span>Aperturas</span><span>Desarrollo de la partida</span></div>
+    </a>
 
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/commander.png" alt="Comandante"></div>
-            <div class="rc">
-              <h4>Comandante <span class="flag">◆ rol clave</span></h4>
-              <p>Ve el tablero completo. Reparte recursos, tira supply drops y bombardeos, refuerza puntos, spawnea tanques y camiones de supply, y coloca garrisons. No dispara la partida con el arma: la dispara con las decisiones.</p>
-              <a class="improve" href="mejorar.html#comandante" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
+    <a class="hub-card" href="comunicacion.html">
+      <span class="go">↗</span>
+      <span class="num">04 · Apartado</span>
+      <h2>Comunicación</h2>
+      <p class="desc">Lo que más peso tiene: la info bien transmitida y a tiempo es lo que gana.</p>
+      <div class="chips"><span>Comunicación</span></div>
+    </a>
 
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/officer.png" alt="Oficial"></div>
-            <div class="rc">
-              <h4>Oficial</h4>
-              <p>Lidera la escuadra. Con el reloj coloca OPs y garrisons, y tiene voz directa con comando, otras escuadras y armor. Sos el comando de tu escuadra: marcás, ordenás y sostenés los spawns.</p>
-              <a class="improve" href="mejorar.html#oficial" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
+    <a class="hub-card" href="proactividad.html">
+      <span class="go">↗</span>
+      <span class="num">05 · Apartado</span>
+      <h2>Proactividad</h2>
+      <p class="desc">No dependas de que te den nada. Esto separa la buena partida de la mala.</p>
+      <div class="chips"><span>Proactividad</span></div>
+    </a>
 
-          <!-- REFERENCIA: dejá acá una imagen/diagrama de OPs, garrisons y supply drops -->
-          <div class="ref"><span class="tagx">Referencia →</span><p>OP y garrison · supply drops · reservado para imagen/diagrama</p></div>
-        </div>
+    <a class="hub-card" href="datos.html">
+      <span class="go">↗</span>
+      <span class="num">06 · Apartado</span>
+      <h2>Datos no negociables</h2>
+      <p class="desc">Números y mecánicas para tener siempre en la cabeza. Lo que no se discute.</p>
+      <div class="chips"><span>Datos duros</span></div>
+    </a>
 
-        <div class="flow-arrow" aria-hidden="true"><i></i></div>
+    <a class="hub-card" href="reglas.html">
+      <span class="go">↗</span>
+      <span class="num">07 · Apartado</span>
+      <h2>Reglas</h2>
+      <p class="desc">Rulesets competitivos: 18v18, 36v36 y 49v49, según comp-hll.org.</p>
+      <div class="chips"><span>Reglas</span></div>
+    </a>
 
-        <!-- ---------- SOPORTE ---------- -->
-        <div class="rtype" style="--c:var(--sup)">
-          <div class="rtype-head"><span class="sq"></span><h3>Soporte</h3><span class="n">sostiene · construye</span></div>
+  </nav>
 
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/support.png" alt="Soporte"></div>
-            <div class="rc">
-              <h4>Soporte</h4>
-              <p>Suma la caja de munición <b>explosiva</b> (repone cohetes del AT y granadas del Asalto), la caja liviana (balas) y 50 supplies (garrisons y cañón AT). Lo primero que construye es un nodo de <b>manpower</b>: le baja el cooldown para tirar supplies más seguido.</p>
-              <a class="improve" href="mejorar.html#soporte" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
+  <div class="hub-foot">
+    "La información bien transmitida y ser consciente de lo que estás haciendo es lo que necesitamos para ganar."<br>
+    Doc. interno · v0.5 — se sigue trabajando.
+  </div>
 
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/engineer.png" alt="Ingeniero"></div>
-            <div class="rc">
-              <h4>Ingeniero</h4>
-              <p>Minas AP como prioridad: puertas, trincheras, tránsito. Minas AT: caminos y puntos de choque de vehículos. Máximo 6 —la séptima reemplaza la primera—, así que reposicionalas al avanzar. Con satchels revienta nodos y garrisons profundos.</p>
-              <a class="improve" href="mejorar.html#ingeniero" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <!-- REFERENCIA: dejá acá imágenes de supplies, minas/estructuras y satchels -->
-          <div class="ref"><span class="tagx">Referencia →</span><p>supplies · minas y estructuras · satchels · reservado para imagen/diagrama</p></div>
-        </div>
-
-        <div class="flow-arrow" aria-hidden="true"><i></i></div>
-
-        <!-- ---------- CHOQUE ---------- -->
-        <div class="rtype" style="--c:var(--cho)">
-          <div class="rtype-head"><span class="sq"></span><h3>Choque</h3><span class="n">rompe · presiona</span></div>
-
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/assault.png" alt="Asalto"></div>
-            <div class="rc">
-              <h4>Asalto</h4>
-              <p>Fuego automático sostenido y superioridad de fuego. En puro edificio (CQB) es de lo más ventajoso: entrás, resolvés el cuarto y avanzás.</p>
-              <a class="improve" href="mejorar.html#asalto" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/auto_rifleman.png" alt="Fusilero automático"></div>
-            <div class="rc">
-              <h4>Fusilero automático</h4>
-              <p>Rifle automático para fuego de apoyo sostenido a nivel escuadra: cubre avances y fija la cabeza del enemigo mientras el resto se mueve.</p>
-              <a class="improve" href="mejorar.html#fusilero-auto" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/mg.png" alt="Ametrallador"></div>
-            <div class="rc">
-              <h4>Ametrallador</h4>
-              <p>Supresión pura. Regla de oro: no se queda fijo. Tira, mata algunos o suprime las salidas, y <b>rota</b>. No puede apuntar con miras sin desplegar el bípode (cuerpo a tierra o sobre una superficie), por eso la posición lo es todo. Después del segundo muerto ya saben dónde estás.</p>
-              <a class="improve" href="mejorar.html#mg" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/rifleman.png" alt="Fusilero"></div>
-            <div class="rc">
-              <h4>Fusilero</h4>
-              <p>La clase base. Buena para aprender a moverse, y con un detalle útil: tira cajas de munición al piso para reponer a la escuadra.</p>
-              <a class="improve" href="mejorar.html#fusilero" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/antitank.png" alt="Anti tanque"></div>
-            <div class="rc">
-              <h4>Anti tanque</h4>
-              <p>Ofensivo: busca los blindados, no los espera, siempre con ventaja al flanco o retaguardia. No siempre conviene disparar apenas ves un tanque —dejarlo acercar te da mejor ángulo y de cerca corrés más rápido de lo que gira la torreta—. Al pesado <b>nunca de frente</b>; y si no escuchás el sonido de impacto, tu cohete no hizo daño. <b>Gastá la munición.</b></p>
-              <a class="improve" href="mejorar.html#antitanque" target="_blank" rel="noopener">Cómo mejorar ↗</a>
-            </div>
-          </div>
-
-          <!-- REFERENCIA: dejá acá imágenes de cohetes AT, supresión y armas automáticas -->
-          <div class="ref"><span class="tagx">Referencia →</span><p>cohetes anti-tanque · supresión · armas automáticas · reservado para imagen/diagrama</p></div>
-        </div>
-
-        <div class="call core">
-          <span class="k">El núcleo del ataque</span>
-          <p>AT + Ingeniero pegados a un Soporte. Esa caja explosiva es, literalmente, lo que le permite a un solo antitanque reventar un pesado recargando munición especial. Sin Soporte pegado, el AT queda de adorno con 2 cohetes y el Ingeniero pone unas pocas minas y chau.</p>
-        </div>
-
-      </div>
-    </section>
-
-    <!-- ==================== 01 · PRE-MATCH ==================== -->
-    <section class="sec" id="prematch">
-      <div class="ord-stamp">01</div>
-      <div class="sec-head reveal">
-        <p class="tag">01 · Pre-match</p>
-        <h2>Antes de pulsar Ready</h2>
-        <p class="sub">La capa macro: lo que se define antes de tocar el spawn. Roster, stratsketch y aperturas.</p>
-      </div>
-      <div class="sec-body">
-        <p>Todo partido serio se arma antes de tocar el spawn. Primero se cierra el <b>roster</b>: quién juega qué grupo, quién arma nodos y en qué HQ, quién maneja los camiones. Con el roster cerrado, comando dibuja el <b>stratsketch</b>: el mapa con la jugada encima —OPs, garrisons, posiciones de tanque—. De ahí salen las <b>aperturas</b> y el plan de después, los esquemas 3-2 y 2-3.</p>
-        <div class="call core"><span class="k">No es opcional</span><p>Las secciones que siguen son la guía para leer todo esto. Es la diferencia entre saber a dónde ir apenas aparecés, o perder el primer minuto y medio preguntando por el chat.</p></div>
-      </div>
-    </section>
-
-    <!-- ==================== 02 · LEER EL ROSTER ==================== -->
-    <section class="sec" id="roster">
-      <div class="ord-stamp">02</div>
-      <div class="sec-head reveal">
-        <p class="tag">02 · Leer el roster</p>
-        <h2>Buscá tu nombre, recordá tu color</h2>
-        <p class="sub">Cada fila es un jugador; cada bloque, un grupo. El color que tenés acá es el mismo que vas a buscar después en el stratsketch.</p>
-      </div>
-      <div class="sec-body">
-        <p>La columna <b>Inicio</b> es organizativa: si tenés responsabilidades más allá de escuadra e infantería, salen acá. <b>Nodos</b> (arriba/centro/abajo) son los grupos que plantan los nodos en cada HQ según el diseño del mapa —a esos jugadores de soporte se les asigna un SL igual: seguí la asignación tal cual está, buscar un rol de apoyo por tu cuenta te come tiempo que no tenés al inicio—. <b>Conductores</b> manejan los camiones de la apertura. <b>Recon de inicio</b> (OT1/OT2) sale de su escuadra asignada para llevar los tanques livianos de reconocimiento mientras dura esa fase.</p>
-        <figure class="shot"><a href="media/premarch/roster-columnas.png" target="_blank" rel="noopener"><img src="media/premarch/roster-columnas.png" alt="Columnas de inicio del roster: nodos por HQ y conductores" loading="lazy"></a><figcaption class="cap"><b>FIG 02.1</b> Nodos por HQ y conductores.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p>La segunda columna es <b>Comando</b>: comandante, artillero, y los escuadrones de tanque —en partidas de 49v49 son tres, más un cuarto flexible si hay disponibilidad—.</p>
-        <p>Después vienen los <b>grupos de juego</b>. INF1/2/3 son los tres frentes: <b>INF1</b> ataca el flanco fuerte, <b>INF2</b> la puerta principal y el punto —el que más bala y artillería enemiga come—, <b>INF3</b> el flanco débil, que además cubre que no te rodeen por ese lado. A cada jugador le cae un rol dentro del pelotón, pero no hace falta seguirlo a rajatabla.</p>
-        <figure class="shot"><a href="media/premarch/roster-inf-groups.png" target="_blank" rel="noopener"><img src="media/premarch/roster-inf-groups.png" alt="Grupos de infantería en el roster" loading="lazy"></a><figcaption class="cap"><b>FIG 02.2</b> INF1 flanco fuerte · INF2 asedio · INF3 flanco débil.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p><b>FLEX AT</b> recorre el mapa para plantar cañones anti-tanque donde el blindaje enemigo pega fuerte, o para ayudar a los tanques propios a bajarlo. <b>FLEX</b> es apoyo suelto para la infantería y ataques sorpresa, tanto en primera línea como en la retaguardia enemiga. <b>RECON1/2</b> trabaja en pareja: el SL tira bengalas para ubicar al enemigo, el francotirador limpia infantería y MGs difíciles de encontrar.</p>
-        <p>La <b>defensa</b> se divide en 3 o 4: <b>PR1/PR2</b> (sonda) cubren el terreno arriba/izquierda y abajo/derecha del punto, <b>DEF</b> cubre la zona de captura y la entrada principal, y <b>WIDE</b> patrulla el lado fuerte —el mismo lado que INF1— para prevenir o alertar jugadas sorpresa.</p>
-        <figure class="shot"><a href="media/premarch/roster-def-groups.png" target="_blank" rel="noopener"><img src="media/premarch/roster-def-groups.png" alt="Grupos de defensa en el roster" loading="lazy"></a><figcaption class="cap"><b>FIG 02.3</b> PR1 · DEF · PR2 · WIDE.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <div class="call"><span class="k">Ejemplo real</span><p>toyota está en defensa PR1 y también asignado a nodos de ingeniería arriba/izquierda. Traducido: aparece como ingeniero, arma los nodos en ese HQ, y después se redespliega como soporte para tirarle cajas al SL de defensa que construye la guarnición inicial.</p></div>
-        <figure class="shot"><a href="media/premarch/roster-ejemplo-nach.png" target="_blank" rel="noopener"><img src="media/premarch/roster-ejemplo-nach.png" alt="Ejemplo de cómo leer una fila del roster" loading="lazy"></a><figcaption class="cap"><b>FIG 02.4</b> Un nombre, un grupo, un color: así se lee cualquier fila.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <figure class="shot"><a href="media/premarch/roster-ejemplo.png" target="_blank" rel="noopener"><img src="media/premarch/roster-ejemplo.png" alt="Roster completo de ejemplo" loading="lazy"></a><figcaption class="cap"><b>FIG 02.5</b> Roster completo, así se ve armado.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 03 · LEER EL STRATSKETCH ==================== -->
-    <section class="sec" id="stratsketch">
-      <div class="ord-stamp">03</div>
-      <div class="sec-head reveal">
-        <p class="tag">03 · Leer el stratsketch</p>
-        <h2>El mapa con la jugada encima</h2>
-        <p class="sub">Banderas, garrisons, posiciones de tanque y rutas. Todo codificado por el color de tu grupo.</p>
-      </div>
-      <div class="sec-body">
-        <div class="rule-block pending">
-          <p class="fmt">EN PREPARACIÓN</p>
-          <p>El contenido y las imágenes de esta sección se cargan más adelante.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ==================== 04 · APERTURAS Y 3-2/2-3 ==================== -->
-    <section class="sec" id="aperturas">
-      <div class="ord-stamp">04</div>
-      <div class="sec-head reveal">
-        <p class="tag">04 · Aperturas y 3-2/2-3</p>
-        <h2>El arranque, y el plan después del arranque</h2>
-        <p class="sub">El primer minuto marca el tono. Y lo que viene después depende de si ganás o perdés el punto medio.</p>
-      </div>
-      <div class="sec-body">
-        <p>La <b>apertura</b> es una de las partes más importantes del partido: marca el tono y puede condicionar todo lo que sigue, según el mapa y cómo estén repartidos los puntos. A veces hay más de una apertura posible para el mismo punto intermedio, dependiendo de cuál termine siendo el segundo punto —eso mueve tu spawn inicial y qué camión tomás—. Prestale atención a la distribución de puntos: en el ejemplo de SME, la apertura depende de si se agarra la batería de artillería o el cementerio/crique, y por eso INF3 se divide y las banderas de FLEX e INF1 se mueven.</p>
-        <figure class="shot"><a href="media/premarch/apertura-ejemplo-1.png" target="_blank" rel="noopener"><img src="media/premarch/apertura-ejemplo-1.png" alt="Ejemplo de apertura, primera variante según el punto disputado" loading="lazy"></a><figcaption class="cap"><b>FIG 04.1</b> Apertura, variante según punto disputado.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <figure class="shot"><a href="media/premarch/apertura-ejemplo-2.png" target="_blank" rel="noopener"><img src="media/premarch/apertura-ejemplo-2.png" alt="Misma apertura con otra distribución de puntos" loading="lazy"></a><figcaption class="cap"><b>FIG 04.2</b> Misma apertura, otra distribución de puntos.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-        <p>Después del punto medio hay dos escenarios. <b>3-2</b>: lo tomaste, y el plan apunta al segundo punto del rival. <b>2-3</b>: lo perdiste, y el plan es empujar desde tu segundo punto de vuelta al medio. A veces no existe un esquema 3-2 para el siguiente punto porque está demasiado lejos —ahí se sostiene el 3-2 tal cual, salvo que FLEX abra una ventana para pasar a 4-1—.</p>
-        <p>En estos esquemas los grupos de INF ya no tienen banderas de OP puntuales: tienen <b>bloques de color</b>. Cada bloque es el área de responsabilidad de ese grupo —defenderla o empujarla, según toque—, porque a esta altura del partido es imposible predecir dónde va a estar cada uno. Los recuadros y círculos verdes son las zonas de la defensa; en 3-2 las garrisons son responsabilidad de todos, pero en la práctica las termina armando la defensa. También vas a ver banderas de recon y OPs flex sueltas por el mapa.</p>
-        <figure class="shot"><a href="media/premarch/esquema-3-2.png" target="_blank" rel="noopener"><img src="media/premarch/esquema-3-2.png" alt="Esquema 3-2 con bloques de color por zona de responsabilidad" loading="lazy"></a><figcaption class="cap"><b>FIG 04.3</b> Bloques de color = zona de responsabilidad, no OP fijo.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 05 · COMUNICACIÓN ==================== -->
-    <section class="sec" id="comunicacion">
-      <div class="ord-stamp">05</div>
-      <div class="sec-head reveal">
-        <p class="tag">05 · Comunicación</p>
-        <h2>El equipo informado resuelve</h2>
-        <p class="sub">Es lo que más peso tiene, porque como oficial dependo de que me llegue la info a tiempo.</p>
-      </div>
-      <div class="sec-body">
-        <p>Si ves infantería filtrándose —por ejemplo metiéndose por el sur— avisá al toque a tu oficial o al que tengas al lado. Una marca en el mapa + "se meten por el sur" a tiempo <b>salva el punto</b>.</p>
-        <div class="call">
-          <span class="k">Dato clave de marcas</span>
-          <p>El líder de escuadra ve <b>todas</b> las marcas del mapa, pero tu escuadra solo ve las que él coloca. Marcar no es opcional: si no lo pasás a la marca, para tu escuadra no existe.</p>
-        </div>
-        <!-- CLIP: marcar una filtración + verse en el mapa -->
-        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — marcar filtración</span><span>media/marca-filtracion.webm · loop</span></div></div><figcaption class="cap"><b>FIG 05.1</b> Marca + voz, a tiempo.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 02 · PROACTIVIDAD ==================== -->
-    <section class="sec" id="proactividad">
-      <div class="ord-stamp">06</div>
-      <div class="sec-head reveal">
-        <p class="tag">06 · Proactividad</p>
-        <h2>No dependas de que te den nada</h2>
-        <p class="sub">Esto separa la buena partida de la mala.</p>
-      </div>
-      <div class="sec-body">
-        <ul class="blist">
-          <li><b>Soporte:</b> cada vez que volvés de morir, tirá caja donde haga falta, sin que te la pidan.</li>
-          <li><b>Abrí el mapa cada 5–10–15 segundos</b>, todo el tiempo: es el hábito número uno. Ahí ves enemigos marcados, OPs propios cayendo y filtraciones.</li>
-          <li>Cubrí edificios y rotá adentro; <b>no se amontonen</b> en una sola pieza: un misil los borra a todos juntos.</li>
-          <li>Si caen los OPs de tus oficiales, el que pueda los <b>repone</b>, aunque sea una cuadra más atrás.</li>
-          <li>Marcá garrys y OPs <b>enemigos</b>: si viene gente una y otra vez, asumí que hay un spawn y comunicalo. Si confirmás que es OP, aseguralo con granada.</li>
-        </ul>
-        <div class="call"><span class="k">Regla de OPs</span><p>Un OP mal puesto es mil veces mejor que no tener ninguno. Si no, roten al garry o al OP que quede mejor posicionado.</p></div>
-        <!-- IMG: strat sketch de red de spawns bien espaciada vs amontonada -->
-        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — red de spawns</span><span>media/red-spawns.jpg</span></div></div><figcaption class="cap"><b>FIG 06.1</b> Repartir la red, no amontonar.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 03 · DATOS DUROS ==================== -->
-    <section class="sec" id="datos">
-      <div class="ord-stamp">07</div>
-      <div class="sec-head reveal">
-        <p class="tag">07 · Datos duros</p>
-        <h2>Lo que no se discute</h2>
-        <p class="sub">Números y mecánicas para tener siempre en la cabeza.</p>
-      </div>
-      <div class="sec-body">
-        <div class="call"><span class="k">El ~90%</span><p>Ganar en HLL es matar garrisons enemigos. Si te revientan siempre desde el mismo lado, no es el aim: hay una garry u OP cerca. Mandamos 2–3 a buscarlo.</p></div>
-        <table class="readout">
-          <caption>Alertas del mapa por proximidad</caption>
-          <thead><tr><th>Zona</th><th>Alerta visual (exclamación)</th><th>Bloqueo absoluto (spawn desactivado)</th></tr></thead>
-          <tbody>
-            <tr><th class="zone-blue">Azul (propia)</th><td>Enemigo a menos de <b>50 m</b></td><td>Enemigo a menos de <b>15 m</b></td></tr>
-            <tr><th class="zone-red">Roja (enemiga)</th><td>No avisa <small>(pasa directo a bloqueo)</small></td><td>Enemigo a menos de <b>100 m</b></td></tr>
-          </tbody>
-        </table>
-        <ul class="blist">
-          <li><b>Regla de los 200 m:</b> dos garrisons no pueden estar a menos de 200 m entre sí. Para medirlo a ojo, con el mapa en zoom out cada cuadrado grande es de 200×200 m.</li>
-          <li>No se pueden construir más de <b>dos sectores rojos</b> dentro del territorio enemigo.</li>
-          <li><b>Smoke al cruzar</b> calles abiertas, en las dos direcciones: cruzar sin humo es regalar la cabeza.</li>
-          <li>Humos <b>de ataque</b>, nunca en defensa.</li>
-          <li><b>FOV</b> al 90% o más si tu PC lo banca.</li>
-        </ul>
-        <!-- IMG: strat sketch del cuadrado de 200m sobre el mapa -->
-        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Strat sketch — regla 200 m</span><span>media/regla-200m.jpg</span></div></div><figcaption class="cap"><b>FIG 07.1</b> El cuadrado del mapa = 200 m.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 04 · INFANTERÍA ==================== -->
-    <section class="sec" id="infanteria">
-      <div class="ord-stamp">08</div>
-      <div class="sec-head reveal">
-        <p class="tag">08 · Gameplay Infantería</p>
-        <h2>Cómo moverse en edificios</h2>
-        <p class="sub">CQB, corta y media distancia. Acá se define el punto.</p>
-      </div>
-      <div class="sec-body">
-        <ul class="blist">
-          <li>Cubrí los edificios y rotá adentro; <b>repartite</b>, no se junten en una sola pieza.</li>
-          <li>Rara vez deberías estar parado: <b>agachado o cuerpo a tierra</b>, y si no hay cobertura, usá los desniveles del terreno.</li>
-          <li>La muerte llega rápido: una ráfaga o un tiro borra a un pelotón entero. Movete como si cada esquina tuviera a alguien.</li>
-        </ul>
-        <div class="call"><span class="k">Humo y granadas</span><p>Humos de ataque para cubrir el avance; en defensa no. Proactividad con las granadas: en CQB una bien tirada resuelve un cuarto entero.</p></div>
-        <!-- CLIP: limpiar un cuarto con granada + entrada -->
-        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — limpiar cuarto</span><span>media/cqb-cuarto.webm · loop</span></div></div><figcaption class="cap"><b>FIG 08.1</b> Granada, entrada, siguiente pieza.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 05 · TANQUISTA ==================== -->
-    <section class="sec" id="tanquista">
-      <div class="ord-stamp">09</div>
-      <div class="sec-head reveal">
-        <p class="tag">09 · Gameplay Tanquista</p>
-        <h2>Fierros</h2>
-        <p class="sub">La tripulación son tres, y cada puesto tiene su laburo.</p>
-      </div>
-      <div class="sec-body">
-
-        <div class="rtype" style="--c:var(--tan-dim)">
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/tank_cmd.png" alt="Comandante de tanque"></div>
-            <div class="rc"><h4>Comandante de tanque</h4><p>Llama los tiros. Binoculares y línea directa con comando, oficiales y armor. Decide posiciones, objetivos y cuándo entrar o salir.</p><a class="improve" href="mejorar.html#tank-cmd" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
-          </div>
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/tank_crew.png" alt="Artillero"></div>
-            <div class="rc"><h4>Artillero</h4><p>Opera el cañón. Detalle clave: cuanto más zoom, más lento gira la torreta —alejá el zoom para velocidad, acercalo para precisión—. El MG del tanque alcanza para reventar vehículos ligeros.</p><a class="improve" href="mejorar.html#artillero" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
-          </div>
-          <div class="rrow">
-            <div class="ic"><img src="media/icons/tank_crew.png" alt="Conductor"></div>
-            <div class="rc"><h4>Conductor</h4><p>Maneja y reposiciona. Mantener el frente hacia el enemigo cuando conviene y, sobre todo, no exponer los laterales ni la retaguardia. La movilidad bien usada gana el duelo antes de disparar.</p><a class="improve" href="mejorar.html#conductor" target="_blank" rel="noopener">Cómo mejorar ↗</a></div>
-          </div>
-        </div>
-
-        <div class="call warn"><span class="k">Nunca</span><p>Al pesado enemigo no lo enfrenten de frente. Buscá el flanco o la retaguardia; ahí está el daño real.</p></div>
-        <!-- CLIP: flanqueo a un tanque + impacto trasero -->
-        <figure class="fig"><div class="frame"><div class="placeholder"><span class="big">Clip — flanqueo</span><span>media/flanqueo-tanque.webm · loop</span></div></div><figcaption class="cap"><b>FIG 09.1</b> Retaguardia = daño que cuenta.</figcaption></figure>
-      </div>
-    </section>
-
-    <!-- ==================== 06 · REGLAS ==================== -->
-    <section class="sec" id="reglas">
-      <div class="ord-stamp">10</div>
-      <div class="sec-head reveal">
-        <p class="tag">10 · Reglas</p>
-        <h2>Rulesets competitivos</h2>
-        <p class="sub">Resumen según comp-hll.org. Algunas todavía no están publicadas; ese espacio queda reservado.</p>
-      </div>
-      <div class="sec-body">
-        <div class="rule-block pending">
-          <h3>18 vs 18</h3>
-          <p class="fmt">FORMATO · WARFARE MODIFICADO</p>
-          <p>Comp-HLL tiene un ruleset propio de 18v18, pero todavía figura como "coming soon": los detalles no están publicados. Cuando salga, va acá.</p>
-          <p class="src">Fuente: comp-hll.org — 18v18 Ruleset (aún sin publicar).</p>
-        </div>
-        <div class="rule-block">
-          <h3>36 vs 36</h3>
-          <p class="fmt">FORMATO · SKIRMISH (LARGE-SCALE)</p>
-          <p>Entra dentro del ruleset de Skirmish. Duración 30 minutos; gana quien controla más tiempo el punto y, si empatan, desempata por kills.</p>
-          <p>Armor: máximo <b>un tanque mediano</b> y <b>una tripulación</b> por equipo. <b>Artillery Strike no se permite</b>. Los nodos se construyen dentro de los sectores de HQ y <b>no se destruyen</b> los del rival. Romper esas reglas es forfeit.</p>
-          <p class="src">Fuente: comp-hll.org — Competitive Skirmish Ruleset.</p>
-        </div>
-        <div class="rule-block">
-          <h3>49 vs 49</h3>
-          <p class="fmt">FORMATO · WARFARE — OJO: ES 49v49, NO 50v50</p>
-          <p>El formato grande de Warfare es 49 por lado. Duración 90 minutos; se gana con un 5-0 (victoria inmediata) o con la mayoría (3-2 o mejor) al final.</p>
-          <p>Por default no se permiten el <b>tanque pesado tope de gama</b> ni el <b>Artillery Strike</b>. Un solo artillero designado usa un cañón en HQ toda la partida. Hay variantes por acuerdo mutuo. Nodos igual que en Skirmish.</p>
-          <p class="src">Fuente: comp-hll.org — Competitive Warfare Ruleset.</p>
-        </div>
-        <div class="foot" style="font-family:var(--f-type);font-size:11px;color:var(--tan-dim);letter-spacing:.08em;margin-top:34px;padding-top:22px;border-top:1px solid var(--line)">FIN DEL DOCUMENTO · v0.4 — se sigue trabajando.</div>
-      </div>
-    </section>
-
-  </main>
-</div>
-
-<script>
-const toggle=document.getElementById('toggle'),nav=document.getElementById('nav');
-if(toggle)toggle.addEventListener('click',()=>nav.classList.toggle('open'));
-nav.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>nav.classList.remove('open')));
-const links=[...nav.querySelectorAll('a')],map=new Map(links.map(a=>[a.getAttribute('href').slice(1),a]));
-const spy=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){links.forEach(l=>l.classList.remove('active'));map.get(e.target.id)?.classList.add('active')}})},{rootMargin:'-45% 0px -50% 0px',threshold:0});
-document.querySelectorAll('.sec').forEach(s=>spy.observe(s));
-const rev=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rev.unobserve(e.target)}})},{threshold:.12});
-document.querySelectorAll('.reveal').forEach(el=>rev.observe(el));
-</script>
+</main>
 </body>
 </html>
