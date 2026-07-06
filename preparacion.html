@@ -21,87 +21,99 @@
     <div class="ord-stamp">02</div>
     <p class="eyebrow">02 · Apartado</p>
     <h1>Preparación de partidas</h1>
-    <p class="sub">La capa macro previa al spawn: lo que se define antes de tocar Ready. Roster, stratsketch y aperturas.</p>
+    <p class="sub">Todo lo que pasa <b>antes</b> de que suene el primer tiro: dónde jugás, qué rol te toca, si hacés nodos y qué tenés que hacer en el arranque. Existe para que nadie llegue al server con la duda de "¿y ahora qué hago?".</p>
   </header>
 
+  <!-- ===== PRE-MATCH / TAREAS DE APERTURA ===== -->
   <section class="block">
     <p class="block-tag">Pre-match</p>
-    <h2>Antes de pulsar Ready <span class="wip">Work in progress</span></h2>
-    <p class="sub">Lo que se arma antes de tocar el spawn.</p>
+    <h2>Tareas de apertura</h2>
+    <p class="sub">La columna "Inicio" es organizativa: si tenés responsabilidades más allá de SL e INF, aparecen acá. En el inicio <b>no hay tiempo</b> para andar buscando rol — seguí la asignación.</p>
     <div class="block-body">
-      <p>Todo partido serio se arma antes de tocar el spawn. Primero se cierra el <b>roster</b>: quién juega qué grupo, quién arma nodos y en qué HQ, quién maneja los camiones. Con el roster cerrado, comando dibuja el <b>stratsketch</b>: el mapa con la jugada encima —OPs, garrisons, posiciones de tanque—. De ahí salen las <b>aperturas</b> y el plan de después, los esquemas 3-2 y 2-3.</p>
-      <div class="call core"><span class="k">No es opcional</span><p>Estas secciones son la guía para leer todo esto. Es la diferencia entre saber a dónde ir apenas aparecés, o perder el primer minuto y medio preguntando por el chat.</p></div>
+      <ul class="blist">
+        <li><b>Nodos (arriba / centro / abajo):</b> el Engineer plantea los nodos en ese HQ según el mapa; los de supply box dejan los suministros. A los de supply se les asigna un SL (SL1, SL2, PR1): seguí esa asignación.</li>
+        <li><b>Conductores:</b> manejan los camiones de la apertura (Red / Green / Blue / Supply truck).</li>
+        <li><b>Recon de inicio (OT1 / OT2):</b> salen de su escuadra normal para llevar los tanques de reconocimiento durante el inicio.</li>
+      </ul>
+      <div class="call"><span class="k">Primer ladrillo</span><p>Lo primero que se construye es un <b>nodo de MANPOWER</b>: le baja el cooldown al soporte para tirar supplies más seguido. Todo lo demás sale de ahí.</p></div>
+      <ul class="blist">
+        <li><b>Tu spawn no cambia tu tarea.</b> Si te toca poner supplies abajo pero spawneás arriba, igual bajás a poner supplies abajo.</li>
+        <li>Si perdés el camión de transporte al inicio, no pasa nada: tu SL pone un OP en la muralla y te unís ahí.</li>
+        <li><b>Equilibrá los escuadrones:</b> SL1 y SL2 deberían tener más o menos la misma cantidad de gente.</li>
+      </ul>
     </div>
   </section>
 
+  <!-- ===== LEER EL ROSTER ===== -->
   <section class="block">
     <p class="block-tag">Leer el roster</p>
     <h2>Buscá tu nombre, recordá tu color</h2>
-    <p class="sub">Cada casilla es un jugador; cada bloque, un grupo. Memorizá el <b>color</b> de tu grupo: lo vas a usar en el stratsketch.</p>
+    <p class="sub">Cada casilla es un jugador; cada bloque, un grupo. Memorizá el <b>color</b> de tu grupo: lo vas a usar en los nodos, en el camión y, sobre todo, en el stratsketch.</p>
     <div class="block-body">
       <ul class="blist">
-        <li><b>Buscá tu nombre:</b> la casilla donde estás es tu <b>grupo</b> para la partida. Aprendé los nombres y las voces de tus compañeros.</li>
-        <li><b>Si no estás en la lista:</b> vas a la <b>reserva</b> (a la izquierda). Igual entrá al briefing: siempre falta alguien y te podemos necesitar. Buen desempeño = más chances de titular.</li>
+        <li><b>Buscá tu nombre:</b> la casilla donde estás es tu grupo para la partida. Aprendé los nombres y las voces de tus compañeros.</li>
+        <li><b>Si no estás en la lista:</b> vas a <b>reservas</b> (abajo a la derecha). Igual entrá al briefing: siempre falta alguien y te podemos necesitar. Buen desempeño = más chances de titular.</li>
       </ul>
 
-      <p class="block-tag">Columna "Inicio" · tareas de apertura</p>
+      <p class="subtag">Los cuatro escuadrones de infantería · por color</p>
+      <p>El roster nombra los grupos por zona, y cada zona tiene su color. El color no es decorativo: es tu identidad toda la partida.</p>
+      <div class="squads">
+        <div class="sq r"><div class="head"><span>Rojo · Norte</span><small>izq / norte</small></div><div class="body"><span class="role">Flanco</span><p>El lado norte / izquierda del punto. Según el mapa, puede ser el flanco fuerte (más acción) o el débil.</p></div></div>
+        <div class="sq g"><div class="head"><span>Verde · Centro</span><small>asedio</small></div><div class="body"><span class="role">Puerta + punto</span><p>Puerta principal y punto de captura. Come la mayor parte del fuego y de la artillería. Lleva ametralladora.</p></div></div>
+        <div class="sq b"><div class="head"><span>Azul · Sur</span><small>der / sur</small></div><div class="body"><span class="role">Flanco</span><p>El lado sur / derecha. Suele cubrir para que no rodeen al Centro. También lleva ametralladora.</p></div></div>
+        <div class="sq f"><div class="head"><span>Ariete · Flex</span><small>ofensiva</small></div><div class="body"><span class="role">Jugadas sorpresa</span><p>Se mueve por el mapa como apoyo extra. Lo ves tanto en primera línea como en la retaguardia enemiga.</p></div></div>
+      </div>
+      <p style="font-size:14px;color:var(--tan-dim)">A cada uno le cae un rol dentro del pelotón, pero no hace falta seguirlo a rajatabla.</p>
+
+      <p class="subtag">El color te sigue toda la partida</p>
+      <p>Es el hilo que conecta todo el pre-match. Tu color aparece una y otra vez:</p>
+      <div class="flow">
+        <span class="step">Color en el roster</span><span class="arr">→</span>
+        <span class="step">Tu nodo</span><span class="arr">→</span>
+        <span class="step">Tu camión</span><span class="arr">→</span>
+        <span class="step">Tu bandera de OP</span><span class="arr">→</span>
+        <span class="step">Tu caja en 3-2 / 2-3</span>
+      </div>
       <ul class="blist">
-        <li><b>Nodos (arriba / centro / abajo):</b> plantan los nodos en ese HQ según el mapa. A los de supply se les asigna un SL —seguí la asignación, no busques rol por tu cuenta: no hay tiempo en el inicio—.</li>
-        <li><b>Conductores:</b> manejan los camiones de la apertura.</li>
-        <li><b>Recon de inicio (OT1 / OT2):</b> salen de su escuadra para llevar los tanques de reconocimiento durante el inicio.</li>
+        <li><span class="chip"><span class="dot r"></span></span> <b>Rojo</b> → Node #1 (izq/norte) · Red Truck.</li>
+        <li><span class="chip"><span class="dot g"></span></span> <b>Verde</b> → Node #2 (centro) · Green Truck.</li>
+        <li><span class="chip"><span class="dot b"></span></span> <b>Azul</b> → Node #3 (der/sur) · Blue Truck.</li>
       </ul>
 
-      <p class="block-tag">Columna "Comando"</p>
+      <p class="subtag">Bloques de comando y utilidad</p>
       <ul class="blist">
-        <li><b>Comandante</b> y <b>Artillero</b> designados para la partida.</li>
-        <li><b>Escuadrones de tanque:</b> en 49v49 son <b>3</b>, más un <b>4º flex</b> (puede pasar de infantería a blindados) si hay disponibilidad.</li>
+        <li><b>Comandante y Logístico:</b> el comando de la partida.</li>
+        <li><b>Artillería:</b> el artillero designado, más infantería que lo asiste.</li>
+        <li><b>Recon (x2):</b> trabajan en pareja. Uno tira bengalas y marca; el sniper limpia infantería y MGs difíciles de sacar. Un bloque lleva Flare + Sniper, el otro Recon + Sniper.</li>
+        <li><b>Incursor (WAMO):</b> SL + Explosivo + Supply box. Escuadra de incursión/sabotaje: garrys, retaguardia, cortar spawns.</li>
+        <li><b>Defensa:</b> DEF Centro / Izquierda / Derecha + infantería. Defiende la zona de captura y los flancos del punto propio.</li>
+        <li><b>Tanques:</b> T1 (lead), T2, Flex y un cuarto. Cada uno con CAP, ART y DRIVER. En 49v49 son 3 escuadrones, más un 4.º flex si hay gente.</li>
       </ul>
 
-      <p class="block-tag">Infantería · INF 1-3</p>
+      <p class="subtag">Doble asignación · un nombre en dos lugares</p>
+      <p>Tu nombre puede aparecer en tu escuadrón <em>y</em> en una tarea de apertura. No es un error: primero hacés la tarea, después te redesplegás a tu grupo.</p>
+      <div class="call"><span class="k">Ejemplo</span><p>Un SL rojo puede estar cargado como <b>supply en Node #1</b> y como <b>conductor del Red Truck</b>. Al inicio: deja supplies en el HQ norte, mueve el camión, y recién ahí vuelve a liderar su escuadra Norte.</p></div>
+
+      <p class="subtag">Lo demás de la hoja</p>
       <ul class="blist">
-        <li><b>INF1 — flanco fuerte:</b> el lado con más acción fuera de la puerta principal.</li>
-        <li><b>INF2 — asedio:</b> puerta principal y punto de captura. Come la mayor parte del fuego y de la artillería.</li>
-        <li><b>INF3 — flanco débil:</b> el lado con menos acción; evita que rodeen a INF2.</li>
-        <li>A cada uno le cae un rol en el pelotón, pero no hace falta seguirlo a rajatabla.</li>
+        <li><b>Pools laterales</b> (Infantería / Oficiales / Tanquistas / Reservas): la bolsa de nombres disponibles para completar huecos.</li>
+        <li><b>Contadores</b> (Total Players / Attendes / Traitors): cuántos somos, cuántos vinieron y cuántos faltaron sin avisar.</li>
+        <li><b>Pie de hoja:</b> Server name/pass, Mapa/Bando, Punto/Modo, Briefing/Resultado. Lo primero que mirás para saber a dónde entrar.</li>
       </ul>
-
-      <p class="block-tag">Utilidad · FLEX y RECON</p>
-      <ul class="blist">
-        <li><b>FLEX AT (FAT):</b> recorre el mapa para plantar cañones AT donde el blindaje pega fuerte, o ayudar a bajar tanques.</li>
-        <li><b>FLEX Offense (FL):</b> apoyo extra a la infantería y ataques sorpresa; primera línea o retaguardia enemiga.</li>
-        <li><b>RECON 1-2:</b> en pareja. El SL tira bengalas para ubicar al enemigo; el francotirador limpia infantería y ametralladoras difíciles.</li>
-      </ul>
-
-      <p class="block-tag">Defensa · 3 o 4 grupos</p>
-      <ul class="blist">
-        <li><b>PR1 (sonda 1):</b> defiende el terreno arriba / izquierda del punto.</li>
-        <li><b>DEF:</b> zona de captura y entrada principal.</li>
-        <li><b>PR2 (sonda 2):</b> defiende abajo / derecha del punto.</li>
-        <li><b>WIDE:</b> patrulla el lado fuerte (mismo lado que INF1); previene y alerta jugadas sorpresa.</li>
-      </ul>
-
-      <p class="block-tag">Leer tu fila · las tareas de apertura</p>
-      <div class="call"><span class="k">Ejemplo · patovis</span><p>Es <b>INF1</b> y además supply (<b>SL1</b>) para los nodos arriba / izquierda: se une al escuadrón del SL1, elige apoyo, deja supplies en ese HQ y se redespliega.</p></div>
-      <div class="call"><span class="k">Ejemplo · toyota</span><p>Es <b>defensa PR1</b> y nodos de ingeniería arriba / izquierda: aparece como <b>ingeniero</b>, construye los nodos en ese HQ, y después se redespliega como <b>apoyo</b> para armar la garrison inicial con su SL de defensa.</p></div>
     </div>
   </section>
 
+  <!-- ===== ROSTER (TEMPLATE) ===== -->
   <section class="block">
-    <p class="block-tag">Roster en vivo</p>
-    <h2>Nuestro roster, en tiempo real</h2>
-    <p class="sub">La planilla real del clan, embebida acá abajo. Se actualiza sola cuando la editamos en Google Sheets. Movete dentro con el scroll; para leerla cómoda, abrila a pantalla completa.</p>
+    <p class="block-tag">El roster que ves en la web</p>
+    <h2>Así se ve nuestra plantilla</h2>
+    <p class="sub">Esta es la hoja "Template" del roster de Uranium 235: la estructura con todos los grupos, colores y puestos. Antes de cada partida se completa con los nombres.</p>
     <div class="block-body">
-      <div class="sheet-embed">
-        <iframe src="https://docs.google.com/spreadsheets/d/1iyS_umN6AmRmcqOKML-kjal-LrIONL39oLzmKIV8azg/preview?rm=minimal&single=true" title="Roster Uranium 235 en vivo" loading="lazy"></iframe>
-      </div>
-      <div class="sheet-bar">
-        <a href="https://docs.google.com/spreadsheets/d/1iyS_umN6AmRmcqOKML-kjal-LrIONL39oLzmKIV8azg/preview?rm=minimal&single=true" target="_blank" rel="noopener">⛶ Abrir a pantalla completa</a>
-        <a href="https://docs.google.com/spreadsheets/d/1iyS_umN6AmRmcqOKML-kjal-LrIONL39oLzmKIV8azg/edit?usp=sharing" target="_blank" rel="noopener">Abrir en Google Sheets ↗</a>
-      </div>
+      <figure class="shot"><a href="media/roster/template.png" target="_blank" rel="noopener"><img src="media/roster/template.png" alt="Plantilla del roster de Uranium 235" loading="lazy"></a><figcaption class="cap"><b>ROSTER · TEMPLATE</b> La plantilla completa, por grupos y colores.<span class="zoom">⤢ clic para ampliar</span></figcaption></figure>
     </div>
   </section>
 
-  <div class="page-foot">Uranium 235 · Preparación de partidas · v0.5 — se sigue trabajando.</div>
+  <div class="page-foot">Uranium 235 · Preparación de partidas · v0.6 — se sigue trabajando.</div>
 </div>
 
 <script>

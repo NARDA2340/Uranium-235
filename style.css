@@ -290,3 +290,37 @@ img{max-width:100%}
 .sheet-bar a{display:inline-flex;align-items:center;gap:6px;color:var(--amber);border:1px solid rgba(201,154,46,.4);padding:5px 12px;border-radius:2px;transition:.15s}
 .sheet-bar a:hover{color:#0e0f0a;background:var(--amber);border-color:var(--amber)}
 .sheet-note{font-family:var(--f-mono);font-size:12.5px;color:var(--tan-dim);margin-top:10px}
+
+/* ===== Componentes del contenido del manual ===== */
+/* Escuadrones por color */
+.squads{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:18px 0}
+@media(max-width:620px){.squads{grid-template-columns:1fr}}
+.sq{border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--surface)}
+.sq .head{padding:8px 12px;font-family:var(--f-type);font-weight:400;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#141009;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sq.r .head{background:#cc4436} .sq.g .head{background:#6aa84f} .sq.b .head{background:#3f7ad8} .sq.f .head{background:#9a8f74}
+.sq .head small{font-weight:400;opacity:.8;font-size:10px;letter-spacing:.06em}
+.sq .body{padding:12px 14px}
+.sq .body .role{color:var(--tan);font-weight:600;font-family:var(--f-display);font-size:16px;letter-spacing:.02em;text-transform:uppercase}
+.sq .body p{margin:4px 0 0;font-size:14px;color:var(--tan-dim);max-width:none}
+
+/* Chips de color */
+.chip{display:inline-flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tan)}
+.chip .dot{width:12px;height:12px;border-radius:2px;flex:none;display:inline-block}
+.dot.r{background:#cc4436} .dot.g{background:#6aa84f} .dot.b{background:#3f7ad8} .dot.f{background:#9a8f74}
+
+/* Flujo "tu color te sigue" */
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:16px 0;font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+.flow .step{border:1px solid var(--line);border-radius:3px;padding:6px 10px;color:var(--tan);background:var(--surface)}
+.flow .arr{color:var(--amber);font-weight:700}
+
+/* Pilares (hub / intro) */
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:6px 0}
+@media(max-width:640px){.pillars{grid-template-columns:1fr}}
+.pillars .p{border:1px solid var(--line);border-radius:5px;padding:16px 18px;background:var(--surface)}
+.pillars .p .n{font-family:var(--f-type);font-size:11px;letter-spacing:.16em;color:var(--amber);text-transform:uppercase}
+.pillars .p h3{font-family:var(--f-display);color:var(--tan);text-transform:uppercase;font-size:18px;margin:6px 0 5px}
+.pillars .p span{font-size:14px;color:var(--tan-dim);display:block}
+
+/* Sub-etiqueta dentro de un bloque (subheading) */
+.subtag{display:flex;align-items:center;gap:12px;font-family:var(--f-type);font-size:11px;font-weight:400;letter-spacing:.16em;text-transform:uppercase;color:var(--amber);margin:26px 0 8px}
+.subtag::after{content:"";flex:1;height:0;border-top:1px dotted var(--line)}
