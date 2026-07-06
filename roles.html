@@ -176,7 +176,7 @@ function showClasses(t){
     a.className='node'; a.href='mejorar.html#'+r.s; a.target='_blank'; a.rel='noopener'; a.style.setProperty('--nc',t.c);
     a.innerHTML='<img src="media/icons/'+r.i+'" alt=""><span class="lbl">'+r.n+'</span><span class="bubble">Clic para más información</span>';
     place(a,ang,idx);
-    const show=()=>{ core.classList.add('show'); core.style.setProperty('--cc',t.c); iFam.textContent=t.name; iH.textContent=r.n; iP.textContent=r.d; iCta.textContent='Clic → Cómo mejorar ↗'; };
+    const show=()=>{ core.classList.add('show'); core.style.setProperty('--cc',t.c); iFam.textContent=t.name; iH.textContent=r.n; iP.textContent=r.d; iCta.textContent=''; };
     a.addEventListener('mouseenter',show);
     a.addEventListener('focus',show);
     a.addEventListener('mouseleave',()=>core.classList.remove('show'));

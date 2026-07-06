@@ -282,3 +282,8 @@ img{max-width:100%}
   .hub-brand,.hub-rule,.hub-card,.hub-foot,.page-hero{opacity:1;transform:none}
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
 }
+
+/* ===== Roster en vivo (Google Sheet embebido) ===== */
+.sheet-embed{position:relative;width:100%;height:72vh;min-height:440px;border:1px solid var(--line);background:#f6f4ec;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.sheet-embed iframe{width:100%;height:100%;border:0;display:block}
+.sheet-note{font-family:var(--f-mono);font-size:12.5px;color:var(--tan-dim);margin-top:10px}
