@@ -130,9 +130,19 @@ const defTitle=document.getElementById('defTitle'), defSub=document.getElementBy
 const info=core.querySelector('.core-info');
 const iFam=info.querySelector('.fam'), iH=info.querySelector('h4'), iP=info.querySelector('p'), iCta=info.querySelector('.cta');
 const R=39;
+const reduce=window.matchMedia('(prefers-reduced-motion:reduce)').matches;
 
 function clearNodes(){ wheel.querySelectorAll('.node').forEach(n=>n.remove()); }
-function place(el,ang){ el.style.left=(50+R*Math.cos(ang))+'%'; el.style.top=(50+R*Math.sin(ang))+'%'; el.classList.add(Math.cos(ang)>=0?'rt':'lf'); }
+function place(el,ang,idx){
+  el.style.left=(50+R*Math.cos(ang))+'%';
+  el.style.top=(50+R*Math.sin(ang))+'%';
+  el.classList.add(Math.cos(ang)>=0?'rt':'lf');
+  if(!reduce){
+    el.style.opacity='0';
+    el.style.transition='transform .16s ease, box-shadow .16s ease, background .16s ease, opacity .5s ease '+(idx*0.05)+'s';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.opacity='1'; }));
+  }
+}
 function resetCore(t,s){ core.classList.remove('show'); defTitle.textContent=t; defSub.textContent=s; }
 
 function showTypes(){
@@ -143,10 +153,10 @@ function showTypes(){
     const el=document.createElement('button');
     el.type='button'; el.className='node type'; el.style.setProperty('--nc',t.c);
     el.innerHTML='<img src="media/icons/'+t.icon+'" alt=""><span class="lbl">'+t.name+'</span><span class="bubble">Ver las clases →</span>';
-    place(el,ang);
     el.addEventListener('mouseenter',()=>{ core.classList.add('show'); core.style.setProperty('--cc',t.c); iFam.textContent='Tipo de clase'; iH.textContent=t.name; iP.textContent=t.desc; iCta.textContent='Clic para ver las clases →'; });
     el.addEventListener('mouseleave',()=>core.classList.remove('show'));
     el.addEventListener('click',()=>showClasses(t));
+    place(el,ang,idx);
     wheel.appendChild(el);
   });
 }
@@ -158,7 +168,7 @@ function showClasses(t){
     const a=document.createElement('a');
     a.className='node'; a.href='mejorar.html#'+r.s; a.target='_blank'; a.rel='noopener'; a.style.setProperty('--nc',t.c);
     a.innerHTML='<img src="media/icons/'+r.i+'" alt=""><span class="lbl">'+r.n+'</span><span class="bubble">Clic para más información</span>';
-    place(a,ang);
+    place(a,ang,idx);
     const show=()=>{ core.classList.add('show'); core.style.setProperty('--cc',t.c); iFam.textContent=t.name; iH.textContent=r.n; iP.textContent=r.d; iCta.textContent='Clic → Cómo mejorar ↗'; };
     a.addEventListener('mouseenter',show);
     a.addEventListener('focus',show);
