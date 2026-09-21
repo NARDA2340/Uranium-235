@@ -66,42 +66,48 @@ U.sketch = (function () {
     render();
   }
 
-  /* ---------------- mapa ---------------- */
-  function cargarMapa() {
+  /* ---------------- mapa: capas ---------------- */
+  function capas() {
+    var st = strat();
+    if (!st.capas) st.capas = { grid: true, puntos: true };
+    return st.capas;
+  }
+
+  function imagen(src, w, h) {
+    var im = ns('image', { x: 0, y: 0, width: w, height: h, preserveAspectRatio: 'none' });
+    im.setAttributeNS('http://www.w3.org/1999/xlink', 'href', src);
+    im.setAttribute('href', src);
+    return im;
+  }
+
+  function cargarMapa(sinEncuadrar) {
     U.vaciar(gMapa);
-    var m = U.map(strat().mapa);
-    var personalizado = strat().imgPropia;
-    var src = personalizado || m.img;
-    if (!src) {
-      NAT = { w: 2000, h: 2000 };
-      aplicarVB();
-      gMapa.appendChild(ns('rect', { x: 0, y: 0, width: 2000, height: 2000, fill: '#1a1a12' }));
-      for (var i = 0; i <= 10; i++) {
-        gMapa.appendChild(ns('line', { x1: i * 200, y1: 0, x2: i * 200, y2: 2000, stroke: '#3a3016', 'stroke-width': 2 }));
-        gMapa.appendChild(ns('line', { x1: 0, y1: i * 200, x2: 2000, y2: i * 200, stroke: '#3a3016', 'stroke-width': 2 }));
-      }
-      var t = ns('text', { x: 1000, y: 1000, fill: '#5a4d2a', 'font-size': 64, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace' });
-      t.textContent = m.nombre.toUpperCase() + ' — sin imagen cargada';
-      gMapa.appendChild(t);
+    var m = U.map(strat().mapa), c = capas(), E = U.ESPACIO;
+
+    if (strat().imgPropia) {
+      // mapa subido a mano: se estira al ancho del espacio y se respeta su alto
+      var img = new Image();
+      img.onload = function () {
+        NAT = { w: E, h: Math.round(E * img.naturalHeight / img.naturalWidth) };
+        U.vaciar(gMapa);
+        gMapa.appendChild(imagen(strat().imgPropia, NAT.w, NAT.h));
+        aplicarVB(!sinEncuadrar); render();
+      };
+      img.onerror = function () { strat().imgPropia = null; U.save(); cargarMapa(); };
+      img.src = strat().imgPropia;
       return;
     }
-    var img = new Image();
-    img.onload = function () {
-      NAT = { w: img.naturalWidth, h: img.naturalHeight };
-      aplicarVB(true);
-      U.vaciar(gMapa);
-      var im = ns('image', { x: 0, y: 0, width: NAT.w, height: NAT.h, preserveAspectRatio: 'none' });
-      im.setAttributeNS('http://www.w3.org/1999/xlink', 'href', src);
-      im.setAttribute('href', src);
-      gMapa.appendChild(im);
-      render();
-    };
-    img.onerror = function () { strat().imgPropia = null; };
-    img.src = src;
+
+    NAT = { w: E, h: E };
+    gMapa.appendChild(ns('rect', { x: 0, y: 0, width: E, height: E, fill: '#15150f' }));
+    if (m.base) gMapa.appendChild(imagen(m.base, E, E));
+    if (c.grid && U.MAPA_GRID) gMapa.appendChild(imagen(U.MAPA_GRID, E, E));
+    if (c.puntos && m.capaPuntos) gMapa.appendChild(imagen(m.capaPuntos, E, E));
+    aplicarVB(!sinEncuadrar);
   }
 
   function aplicarVB(reset) {
-    if (reset || VB.w === 2000) { VB = { x: 0, y: 0, w: NAT.w, h: NAT.h }; }
+    if (reset || !VB.w || VB.w <= 0) VB = { x: 0, y: 0, w: NAT.w, h: NAT.h };
     svg.setAttribute('viewBox', VB.x + ' ' + VB.y + ' ' + VB.w + ' ' + VB.h);
   }
 
@@ -192,6 +198,27 @@ U.sketch = (function () {
 
     toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Mapa' }));
     var acc = U.el('div', { class: 'sk-grp col' });
+
+    var selMapa = U.el('select', { class: 'inp sm' });
+    U.MAPS.forEach(function (m) {
+      selMapa.appendChild(U.el('option', { value: m.id, text: m.nombre, selected: m.id === strat().mapa ? 'selected' : null }));
+    });
+    selMapa.addEventListener('change', function () {
+      var p = U.partida();
+      strat().mapa = selMapa.value; strat().imgPropia = null;
+      p.mapa = selMapa.value; p.punto = '';
+      U.save(); cargarMapa(); render(); U.emit('dash'); U.emit('mapa');
+    });
+    acc.appendChild(selMapa);
+
+    var cps = capas();
+    [['grid', 'Cuadrícula'], ['puntos', 'Puntos y recursos']].forEach(function (c) {
+      acc.appendChild(U.el('button', {
+        class: 'sk-capa' + (cps[c[0]] ? ' on' : ''), text: c[1],
+        onclick: function () { cps[c[0]] = !cps[c[0]]; U.save(); cargarMapa(true); pintarTools(); }
+      }));
+    });
+
     acc.appendChild(U.el('button', { class: 'btn sm', text: 'Cargar imagen', onclick: subirMapa }));
     acc.appendChild(U.el('button', { class: 'btn sm', text: 'Encuadrar', onclick: function () { aplicarVB(true); render(); } }));
     acc.appendChild(U.el('button', { class: 'btn sm', text: 'Limpiar slide', onclick: function () {
@@ -199,6 +226,7 @@ U.sketch = (function () {
     } }));
     acc.appendChild(U.el('button', { class: 'btn sm primary', text: '▶ Presentar', onclick: presentar }));
     toolbar.appendChild(acc);
+    toolbar.appendChild(U.el('p', { class: 'sk-credito', html: 'Capas de mapa: texturas del juego + overlays de <b>Maps Let Loose</b>.' }));
   }
 
   function subirMapa() {
@@ -206,7 +234,7 @@ U.sketch = (function () {
     inp.addEventListener('change', function () {
       if (!inp.files[0]) return;
       U.optimizarImagen(inp.files[0], 2400).then(function (r) {
-        strat().imgPropia = r.url; U.save(); cargarMapa();
+        strat().imgPropia = r.url; U.save(); cargarMapa(); pintarTools();
         U.toast('Mapa cargado');
       });
     });
@@ -222,7 +250,7 @@ U.sketch = (function () {
     svg.addEventListener('wheel', function (e) {
       e.preventDefault();
       var p = svgPt(e), f = e.deltaY > 0 ? 1.12 : 0.89;
-      var nw = Math.min(NAT.w * 2.5, Math.max(NAT.w * 0.08, VB.w * f));
+      var nw = Math.min(NAT.w * 2.5, Math.max(NAT.w * 0.03, VB.w * f));
       var k = nw / VB.w;
       VB.x = p.x - (p.x - VB.x) * k; VB.y = p.y - (p.y - VB.y) * k;
       VB.w = VB.w * k; VB.h = VB.h * k;
@@ -694,6 +722,6 @@ U.sketch = (function () {
   return {
     montar: montar,
     render: function () { if (svg) { render(); } },
-    recargarMapa: function () { if (svg) { cargarMapa(); render(); } }
+    recargarMapa: function () { if (svg) { cargarMapa(); pintarTools(); render(); } }
   };
 })();

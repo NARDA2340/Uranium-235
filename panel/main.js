@@ -99,6 +99,8 @@ U.arrancar = function () {
   U.on('dash', function () { U.dash.render(); });
   U.on('editarMiembro', function (m) { U.roster.editar(m); });
   U.on('todo', function () { U.dash.render(); U.roster.render(); U.sketch.recargarMapa(); });
+  U.on('strat', function () { U.sketch.recargarMapa(); });   // cambió el mapa desde el roster
+  U.on('mapa', function () { U.roster.render(); });          // cambió el mapa desde la estrategia
 
   U.tab(U.state.ui.tab || 'dashboard');
 };

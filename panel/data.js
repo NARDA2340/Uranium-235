@@ -99,32 +99,41 @@ U.ROSTER = [
 ];
 U.group = function (id) { return U.ROSTER.find(g => g.id === id); };
 
-/* --- Mapas. La imagen táctica va en media/maps/. Los puntos salen de la
-       hoja "Datos". Sumar un mapa = sumar una entrada acá. --- */
+/* --- Mapas. Texturas del juego (4096) reescaladas a 2560 + capas de
+       cuadrícula y puntos, todas en el espacio de 1920x1920 que usa la
+       comunidad. Sumar un mapa = sumar una entrada acá. --- */
+U.ESPACIO = 1920;   // sistema de coordenadas del sketch, fijo para todos los mapas
 U.MAPS = [
-  { id: 'carentan', nombre: 'Carentan', img: '../media/maps/carentan.jpg',
+  { id: 'carentan', nombre: 'Carentan',
     puntos: ['Blactot', 'Pumping Station', 'Canal Crossing', 'Customs', 'Canal Locks', '502nd Start',
              'Ruins', 'Town Center', 'Rail Crossing', 'Rail Causeway', 'Farm Ruins', 'Derailed Train',
              'Train Station', 'Mont Halais', 'La Maison des Ormes'] },
-  { id: 'smdm',  nombre: 'Sainte-Marie-du-Mont', img: '', puntos: ['The Dugout', 'AA Network', "Pierre's Farm", 'Winters Landing', 'Le Grand Chemin', 'Brecourt', 'Rue de la Gare'] },
-  { id: 'sme',   nombre: 'Sainte-Mère-Église',  img: '', puntos: ['Hospice', 'Ste-Mere-Eglise', 'Checkpoint', 'Flak Position', 'Vaulaville', 'Artillery Battery', 'Cemetery'] },
-  { id: 'driel', nombre: 'Driel',               img: '', puntos: ['Brick Factory', 'Railway Factory', 'Gun Emplacement', 'Rail Bridge', 'Schaduwwolken', 'Middel Windmill'] },
-  { id: 'hill400', nombre: 'Hill 400',          img: '', puntos: ['Flak Pits', 'Hill 400', 'Southern Approach', 'Eastern Descent', 'Convoy Ambush'] },
-  { id: 'hurtgen', nombre: 'Hürtgen Forest',    img: '', puntos: ['North Pass', 'The Scar', 'The Siegfried Line', 'Reserve Station', 'Jacob\'s Barn'] },
-  { id: 'foy',   nombre: 'Foy',                 img: '', puntos: ['West Bend', 'Southern Edge', 'Dugout Barn', 'Road To Foy', 'Foy', 'Flak Battery'] },
-  { id: 'kursk', nombre: 'Kursk',               img: '', puntos: ['The Windmills', 'Yamki', "Oleg's House", 'Defence In Depth', 'Grushki'] },
-  { id: 'stalingrad', nombre: 'Stalingrad',     img: '', puntos: ['Railway Crossing', 'Carriage Depot', 'Train Station', 'House Of Culture', 'Pavlov\'s House'] },
-  { id: 'kharkov', nombre: 'Kharkov',           img: '', puntos: ['Water Mill', 'St Mary', 'Distillery', 'Marsh Town', 'Bitter Spring'] },
-  { id: 'remagen', nombre: 'Remagen',           img: '', puntos: ['St Severin Chapel', 'Ludendorf Chapel', 'Bauernhof Am Rhein', 'Erpel', 'Kasbach Outskirts'] },
-  { id: 'omaha', nombre: 'Omaha Beach',         img: '', puntos: ['West Vierville', 'Vierville Sur Mer', 'Hamel Au Pretre', 'Church Road', 'Dog Green'] },
-  { id: 'utah',  nombre: 'Utah Beach',          img: '', puntos: ['WN4', 'The Chapel', 'WN7', 'Sunken Bridge', 'Flooded House'] },
-  { id: 'phl',   nombre: 'Purple Heart Lane',   img: '', puntos: ['Grout Pilbox', 'Carentan Causeway', 'Flak Position', 'Madeleine Farm', 'Dead Man\'s Corner'] },
-  { id: 'elalamein', nombre: 'El Alamein',      img: '', puntos: ['Desert Rat Trenches', 'Oasis', 'Valley', 'Miteirya Ridge', 'Watchtower'] },
-  { id: 'elsenborn', nombre: 'Elsenborn Ridge', img: '', puntos: ['Road To Elsenborn Ridge', 'Dug Out Tank', 'Checkpoint', 'Buschit Farm', 'Trenches'] },
-  { id: 'mortain', nombre: 'Mortain',           img: '', puntos: ['Hill 314', 'Petit Chapelle Saint Michael', 'US Southern Roadblock', 'Abbaye Blanche', 'Le Neufbourg'] },
-  { id: 'tobruk', nombre: 'Tobruk',             img: '', puntos: ['Desert Rat Caves', 'Church Grounds', 'Admiralty House', 'Fort Airente', 'Bir El Medauuar'] },
-  { id: 'smolensk', nombre: 'Smolensk',         img: '', puntos: ['Cathedral', 'Rail Yard', 'Lopatinsky Garden'] }
+  { id: 'smdm',  nombre: 'Sainte-Marie-du-Mont', puntos: ['The Dugout', 'AA Network', "Pierre's Farm", 'Winters Landing', 'Le Grand Chemin', 'Brecourt', 'Rue de la Gare'] },
+  { id: 'sme',   nombre: 'Sainte-Mère-Église',  puntos: ['Hospice', 'Ste-Mere-Eglise', 'Checkpoint', 'Flak Position', 'Vaulaville', 'Artillery Battery', 'Cemetery'] },
+  { id: 'driel', nombre: 'Driel',               puntos: ['Brick Factory', 'Railway Factory', 'Gun Emplacement', 'Rail Bridge', 'Schaduwwolken', 'Middel Windmill'] },
+  { id: 'hill400', nombre: 'Hill 400',          puntos: ['Flak Pits', 'Hill 400', 'Southern Approach', 'Eastern Descent', 'Convoy Ambush'] },
+  { id: 'hurtgen', nombre: 'Hürtgen Forest',    puntos: ['North Pass', 'The Scar', 'The Siegfried Line', 'Reserve Station', "Jacob's Barn"] },
+  { id: 'foy',   nombre: 'Foy',                 puntos: ['West Bend', 'Southern Edge', 'Dugout Barn', 'Road To Foy', 'Foy', 'Flak Battery'] },
+  { id: 'kursk', nombre: 'Kursk',               puntos: ['The Windmills', 'Yamki', "Oleg's House", 'Defence In Depth', 'Grushki'] },
+  { id: 'stalingrad', nombre: 'Stalingrad',     puntos: ['Railway Crossing', 'Carriage Depot', 'Train Station', 'House Of Culture', "Pavlov's House"] },
+  { id: 'kharkov', nombre: 'Kharkov',           puntos: ['Water Mill', 'St Mary', 'Distillery', 'Marsh Town', 'Bitter Spring'] },
+  { id: 'remagen', nombre: 'Remagen',           puntos: ['St Severin Chapel', 'Ludendorf Chapel', 'Bauernhof Am Rhein', 'Erpel', 'Kasbach Outskirts'] },
+  { id: 'omaha', nombre: 'Omaha Beach',         puntos: ['West Vierville', 'Vierville Sur Mer', 'Hamel Au Pretre', 'Church Road', 'Dog Green'] },
+  { id: 'utah',  nombre: 'Utah Beach',          puntos: ['WN4', 'The Chapel', 'WN7', 'Sunken Bridge', 'Flooded House'] },
+  { id: 'phl',   nombre: 'Purple Heart Lane',   puntos: ['Grout Pilbox', 'Carentan Causeway', 'Flak Position', 'Madeleine Farm', "Dead Man's Corner"] },
+  { id: 'elalamein', nombre: 'El Alamein',      puntos: ['Desert Rat Trenches', 'Oasis', 'Valley', 'Miteirya Ridge', 'Watchtower'] },
+  { id: 'elsenborn', nombre: 'Elsenborn Ridge', puntos: ['Road To Elsenborn Ridge', 'Dug Out Tank', 'Checkpoint', 'Buschit Farm', 'Trenches'] },
+  { id: 'mortain', nombre: 'Mortain',           puntos: ['Hill 314', 'Petit Chapelle Saint Michael', 'US Southern Roadblock', 'Abbaye Blanche', 'Le Neufbourg'] },
+  { id: 'tobruk', nombre: 'Tobruk',             puntos: ['Desert Rat Caves', 'Church Grounds', 'Admiralty House', 'Fort Airente', 'Bir El Medauuar'] },
+  { id: 'smolensk', nombre: 'Smolensk',         puntos: ['Cathedral', 'Rail Yard', 'Lopatinsky Garden'] },
+  { id: 'juno',  nombre: 'Juno Beach',          puntos: ['Nan White', 'Mike Sector', 'Courseulles-sur-Mer', 'The Chateau', 'Rue de Mer'] }
 ];
+/* rutas de las capas de cada mapa */
+U.MAPS.forEach(function (m) {
+  m.base = '../media/maps/base/' + m.id + '.webp';
+  m.capaPuntos = '../media/maps/puntos/' + m.id + '.webp';
+});
+U.MAPA_GRID = '../media/maps/grid.webp';
 U.map = function (id) { return U.MAPS.find(m => m.id === id) || U.MAPS[0]; };
 
 U.BANDOS = ['Aliados', 'Eje', 'US', 'Wehrmacht', 'British', 'Soviético', 'DAK'];

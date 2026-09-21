@@ -127,6 +127,15 @@ U.elegirJugador = function (opts) {
 U.campo = function (label, valor, onChange, opts) {
   opts = opts || {};
   var inp;
+  if (opts.lista) {
+    inp = U.el('input', { class: 'inp', value: valor || '', placeholder: opts.ph || '', autocomplete: 'off' });
+    var lid = 'dl' + U.uid('');
+    var dl = U.el('datalist', { id: lid });
+    (opts.lista || []).forEach(function (o) { dl.appendChild(U.el('option', { value: o })); });
+    inp.setAttribute('list', lid);
+    inp.addEventListener('change', function () { onChange(inp.value); });
+    return U.el('label', { class: 'campo' }, [U.el('span', { text: label }), inp, dl]);
+  }
   if (opts.opciones) {
     inp = U.el('select', { class: 'inp' });
     (opts.vacio ? [''] : []).concat(opts.opciones).forEach(function (o) {

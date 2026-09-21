@@ -394,3 +394,17 @@ textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:v
   .sk-leyenda{flex-basis:auto;border-left:0;border-top:1px solid var(--line)}
   .present{grid-template-columns:1fr}
 }
+
+/* capas del mapa */
+.sk-capa{
+  background:transparent;border:1px solid var(--line-dim);color:var(--tan-dim);cursor:pointer;
+  font-family:var(--f-mono);font-size:10.5px;padding:5px 7px;border-radius:2px;text-align:left;width:100%;
+  display:flex;align-items:center;gap:6px;
+}
+.sk-capa::before{content:"";width:9px;height:9px;border:1px solid var(--line);background:#12100a;flex:0 0 9px}
+.sk-capa:hover{border-color:var(--amber);color:var(--tan)}
+.sk-capa.on{color:var(--amber-hi);border-color:rgba(201,154,46,.5)}
+.sk-capa.on::before{background:var(--amber);border-color:var(--amber)}
+.inp.sm{font-size:11.5px;padding:5px 6px}
+.sk-credito{font-family:var(--f-mono);font-size:9px;line-height:1.5;color:#6d6349;margin:10px 0 0;border-top:1px dashed var(--line-dim);padding-top:8px}
+.sk-credito b{color:var(--tan-dim);font-weight:400}

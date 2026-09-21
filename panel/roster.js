@@ -40,7 +40,7 @@ U.roster = (function () {
       var m = U.MAPS.find(function (x) { return x.nombre === v; });
       if (m) { p.mapa = m.id; p.strat.mapa = m.id; p.punto = ''; U.save(); render(); U.emit('strat'); }
     }, { opciones: U.MAPS.map(function (m) { return m.nombre; }) }));
-    box.appendChild(U.campo('Punto', p.punto, function (v) { p.punto = v; U.save(); }, { opciones: mapa.puntos, vacio: true }));
+    box.appendChild(U.campo('Punto', p.punto, function (v) { p.punto = v; U.save(); U.emit('dash'); }, { lista: mapa.puntos, ph: 'punto en disputa' }));
     box.appendChild(U.campo('Bando', p.bando, function (v) { p.bando = v; U.save(); }, { opciones: U.BANDOS }));
     box.appendChild(U.campo('Modo', p.modo, function (v) { p.modo = v; U.save(); }, { opciones: U.MODOS }));
     return box;

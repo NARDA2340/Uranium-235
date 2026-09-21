@@ -29,6 +29,8 @@ U.nuevaPartida = function (nombre) {
     reservas: [],       // ids de miembros en banco
     strat: {
       mapa: 'carentan',
+      espacio: 1920,
+      capas: { grid: true, puntos: true },
       activa: 0,
       slides: [{ id: U.uid('s'), nombre: 'Apertura', objs: [] }]
     }
@@ -66,11 +68,32 @@ U.migrar = function () {
   });
   U.state.partidas.forEach(function (p) {
     if (!p.strat) p.strat = { mapa: p.mapa || 'carentan', activa: 0, slides: [{ id: U.uid('s'), nombre: 'Apertura', objs: [] }] };
+    if (!p.strat.capas) p.strat.capas = { grid: true, puntos: true };
+    if (!p.strat.espacio) {
+      // antes las coordenadas iban en píxeles de la imagen del mapa;
+      // ahora todo vive en el espacio fijo de 1920 de la comunidad
+      var viejo = p.strat.mapa === 'carentan' ? 1123 : 2000;
+      U.reescalar(p.strat, 1920 / viejo);
+      p.strat.espacio = 1920;
+    }
     if (!p.strat.slides.length) p.strat.slides.push({ id: U.uid('s'), nombre: 'Apertura', objs: [] });
     if (!p.extraSlots) p.extraSlots = {};
     if (!p.reservas) p.reservas = [];
   });
   if (!U.state.activa || !U.partida()) U.state.activa = U.state.partidas[0] && U.state.partidas[0].id;
+};
+
+/* reescala los objetos de un strat cuando cambia el sistema de coordenadas */
+U.reescalar = function (st, k) {
+  if (!k || k === 1) return;
+  (st.slides || []).forEach(function (sl) {
+    (sl.objs || []).forEach(function (o) {
+      if (o.pts) o.pts = o.pts.map(function (q) { return [q[0] * k, q[1] * k]; });
+      ['x', 'y', 'x2', 'y2', 'w', 'h', 'r', 'size'].forEach(function (f) {
+        if (typeof o[f] === 'number') o[f] = o[f] * k;
+      });
+    });
+  });
 };
 
 var saveT = null;
