@@ -1,0 +1,8 @@
+{
+  "name": "uranium-235",
+  "private": true,
+  "description": "Manual de combate y panel de operaciones del clan Uranium 235 (Hell Let Loose).",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

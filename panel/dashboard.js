@@ -10,15 +10,27 @@ U.dash = (function () {
 
   /* ---------- cálculos ---------- */
   function statsPartida(p) {
-    var vistos = {}, total = 0, ok = 0;
-    Object.keys(p.asignaciones).forEach(function (k) {
+    var est = {};
+    Object.keys(p.asignaciones || {}).forEach(function (k) {
       var a = p.asignaciones[k];
       if (!a || !a.m) return;
-      if (!vistos[a.m]) { vistos[a.m] = a.ok ? 2 : 1; }
-      else if (a.ok) vistos[a.m] = 2;
+      if (est[a.m] === 'ok') return;
+      var e = a.est || '';
+      if (e === 'ok' || !est[a.m] || (est[a.m] === '' && e)) est[a.m] = e;
     });
-    Object.keys(vistos).forEach(function (id) { total++; if (vistos[id] === 2) ok++; });
-    return { total: total, ok: ok, falta: total - ok, pct: total ? Math.round(ok / total * 100) : 0, jugadores: vistos };
+    var total = 0, ok = 0, falta = 0, sm = 0;
+    Object.keys(est).forEach(function (id) {
+      total++;
+      if (est[id] === 'ok') ok++;
+      else if (est[id] === 'falta') falta++;
+      else sm++;
+    });
+    var marcados = ok + falta;
+    return {
+      total: total, ok: ok, falta: falta, sinMarcar: sm,
+      pct: marcados ? Math.round(ok / marcados * 100) : 0,
+      jugadores: est
+    };
   }
 
   function asistenciaPorJugador() {
@@ -26,9 +38,10 @@ U.dash = (function () {
     U.state.partidas.forEach(function (p) {
       var s = statsPartida(p);
       Object.keys(s.jugadores).forEach(function (id) {
-        m[id] = m[id] || { conv: 0, ok: 0 };
+        m[id] = m[id] || { conv: 0, ok: 0, falta: 0 };
         m[id].conv++;
-        if (s.jugadores[id] === 2) m[id].ok++;
+        if (s.jugadores[id] === 'ok') m[id].ok++;
+        else if (s.jugadores[id] === 'falta') m[id].falta++;
       });
     });
     return m;
@@ -57,9 +70,9 @@ U.dash = (function () {
     [
       { k: 'Plantel', v: U.state.miembros.length, s: activos + ' activos' },
       { k: 'Convocados', v: st.total, s: 'en ' + p.nombre },
-      { k: 'Asistencia', v: st.pct + '%', s: st.ok + ' de ' + st.total, tono: st.pct >= 85 ? 'ok' : st.pct >= 65 ? 'warn' : 'bad' },
-      { k: 'Faltaron', v: st.falta, s: 'sin avisar', tono: st.falta ? 'bad' : 'ok' },
-      { k: 'Banco', v: p.reservas.length, s: 'reservas' },
+      { k: 'Asistencia', v: (st.ok + st.falta) ? st.pct + '%' : '—', s: st.ok + ' vinieron de ' + (st.ok + st.falta) + ' marcados', tono: st.pct >= 85 ? 'ok' : st.pct >= 65 ? 'warn' : 'bad' },
+      { k: 'Faltaron', v: st.falta, s: 'tildados a mano', tono: st.falta ? 'bad' : 'ok' },
+      { k: 'Sin marcar', v: st.sinMarcar, s: 'falta pasar lista', tono: st.sinMarcar ? 'warn' : 'ok' },
       { k: 'Partidas', v: conPartidas.length, s: 'cargadas' }
     ].forEach(function (t) {
       kpis.appendChild(U.el('div', { class: 'd-kpi ' + (t.tono || '') }, [
@@ -124,7 +137,7 @@ U.dash = (function () {
 
   /* --- asistencia por partida (columnas) --- */
   function cardAsistencia() {
-    var c = card('Asistencia por partida', '% de convocados que aparecieron');
+    var c = card('Asistencia por partida', '% de los marcados que aparecieron');
     var ps = U.state.partidas.filter(function (x) { return Object.keys(x.asignaciones).length; }).slice(-10);
     if (!ps.length) { c.appendChild(vacio('Todavía no hay partidas con roster cargado.')); return c; }
     var W = 560, H = 190, padL = 34, padB = 42, padT = 14;
@@ -148,7 +161,7 @@ U.dash = (function () {
       var lb = el('text', { x: x + w / 2, y: H - padB + 15, fill: '#9c8e6c', 'font-size': 9.5, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace' });
       lb.textContent = (p.nombre || '').slice(0, 11); g.appendChild(lb);
       var lb2 = el('text', { x: x + w / 2, y: H - padB + 28, fill: '#6b6048', 'font-size': 9, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace' });
-      lb2.textContent = s.ok + '/' + s.total; g.appendChild(lb2);
+      lb2.textContent = s.ok + '/' + (s.ok + s.falta); g.appendChild(lb2);
       var tt = el('title'); tt.textContent = p.nombre + ' · ' + s.ok + ' de ' + s.total + ' (' + s.pct + '%)';
       g.appendChild(tt);
       svg.appendChild(g);
@@ -158,25 +171,32 @@ U.dash = (function () {
   }
 
   /* --- estado del plantel (barra segmentada + leyenda) --- */
-  var TONOS = { 'Activo': '#6f8a3f', 'Comprometido': '#c99a2e', 'Contactado': '#8a7a52', 'Reserva': '#4a7fa5', 'Inalcanzable': '#b0432f', 'Retirado': '#5a4d2a' };
+  function tono(e) { return U.ESTADO_COLOR[e] || '#5a4d2a'; }
+
   function cardEstados() {
-    var c = card('Estado del plantel', 'Cómo está repartida la base de jugadores');
+    var c = card('Estado del plantel', 'Clic en cualquier estado para cambiarlo');
     var cuenta = {};
     U.state.miembros.forEach(function (m) { cuenta[m.estado] = (cuenta[m.estado] || 0) + 1; });
     var total = U.state.miembros.length || 1;
+
     var barra = U.el('div', { class: 'seg' });
     U.ESTADOS.filter(function (e) { return cuenta[e]; }).forEach(function (e) {
       barra.appendChild(U.el('div', {
         class: 'seg-i', title: e + ': ' + cuenta[e],
-        style: { width: (cuenta[e] / total * 100) + '%', background: TONOS[e] || '#5a4d2a' }
+        style: { width: (cuenta[e] / total * 100) + '%', background: tono(e) }
       }));
     });
     c.appendChild(barra);
+
     var leg = U.el('div', { class: 'leg' });
-    U.ESTADOS.filter(function (e) { return cuenta[e]; }).forEach(function (e) {
-      leg.appendChild(U.el('span', { class: 'leg-i', style: { '--c': TONOS[e] || '#5a4d2a' }, html: '<i></i>' + e + ' <b>' + cuenta[e] + '</b>' }));
+    U.ESTADOS.forEach(function (e) {
+      leg.appendChild(U.el('span', {
+        class: 'leg-i', style: { '--c': tono(e) },
+        html: '<i></i>' + e + ' <b>' + (cuenta[e] || 0) + '</b>'
+      }));
     });
     c.appendChild(leg);
+    c.appendChild(U.el('p', { class: 'ayuda', text: 'Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más o no aparece nunca.' }));
 
     var porUnidad = {};
     U.state.miembros.forEach(function (m) { porUnidad[m.unidad] = (porUnidad[m.unidad] || 0) + 1; });
@@ -199,13 +219,16 @@ U.dash = (function () {
     var c = card('Asistencia acumulada', 'Sobre todas las partidas cargadas');
     var m = asistenciaPorJugador();
     var arr = Object.keys(m).map(function (id) {
-      return { id: id, nombre: U.nombreMiembro(id), conv: m[id].conv, ok: m[id].ok, pct: Math.round(m[id].ok / m[id].conv * 100) };
+      return {
+        id: id, nombre: U.nombreMiembro(id), conv: m[id].conv, ok: m[id].ok, falta: m[id].falta,
+        pct: Math.round(m[id].ok / m[id].conv * 100)
+      };
     }).sort(function (a, b) { return b.ok - a.ok || b.pct - a.pct; }).slice(0, 12);
     if (!arr.length) { c.appendChild(vacio('Cargá el roster y marcá quién vino.')); return c; }
     var max = arr[0].conv || 1;
     var body = U.el('div', { class: 'bars' });
     arr.forEach(function (j) {
-      var row = U.el('div', { class: 'bar-row', title: j.nombre + ': vino ' + j.ok + ' de ' + j.conv });
+      var row = U.el('div', { class: 'bar-row', title: j.nombre + ': vino ' + j.ok + ' de ' + j.conv + ' · faltó ' + j.falta });
       row.appendChild(U.el('span', { class: 'lb', text: j.nombre }));
       var track = U.el('div', { class: 'track' });
       track.appendChild(U.el('div', { class: 'fill', style: { width: (j.ok / max * 100) + '%', background: '#c99a2e' } }));
@@ -222,12 +245,12 @@ U.dash = (function () {
   function cardPartidas() {
     var c = card('Partidas', 'Historial cargado en el panel');
     var t = U.el('table', { class: 'tabla' });
-    t.appendChild(U.el('thead', {}, [U.el('tr', {}, ['Partida', 'Fecha', 'Mapa', 'Punto', 'Modo', 'Convocados', 'Vinieron', 'Resultado', ''].map(function (h) { return U.el('th', { text: h }); }))]));
+    t.appendChild(U.el('thead', {}, [U.el('tr', {}, ['Partida', 'Fecha', 'Mapa', 'Punto', 'Modo', 'Convocados', 'Vinieron', 'Faltaron', 'Resultado', ''].map(function (h) { return U.el('th', { text: h }); }))]));
     var tb = U.el('tbody');
     U.state.partidas.slice().reverse().forEach(function (p) {
       var s = statsPartida(p);
       var tr = U.el('tr', { class: p.id === U.state.activa ? 'on' : '' });
-      [p.nombre, p.fecha, U.map(p.strat.mapa || p.mapa).nombre, p.punto || '—', p.modo, s.total, s.ok + ' (' + s.pct + '%)', p.resultado || '—']
+      [p.nombre, p.fecha, U.map(p.strat.mapa || p.mapa).nombre, p.punto || '—', p.modo, s.total, s.ok, s.falta, p.resultado || '—']
         .forEach(function (v) { tr.appendChild(U.el('td', { text: v })); });
       tr.appendChild(U.el('td', {}, [
         U.el('button', { class: 'btn xs', text: p.id === U.state.activa ? 'activa' : 'activar', onclick: function () { U.state.activa = p.id; U.save(); U.emit('partidas'); U.emit('todo'); } })
@@ -239,36 +262,54 @@ U.dash = (function () {
     return c;
   }
 
-  /* --- tabla del plantel --- */
+  /* --- tabla del plantel: alta rápida y semáforo de un clic --- */
   function cardPlantel() {
-    var c = card('Base de jugadores', U.state.miembros.length + ' cargados · doble clic para editar');
+    var c = card('Base de jugadores', U.state.miembros.length + ' cargados');
+
+    var acciones = U.el('div', { class: 'plantel-acc' }, [
+      U.el('button', { class: 'btn primary', text: '＋ Agregar jugador', onclick: function () { U.emit('nuevoMiembro'); } }),
+      U.el('button', { class: 'btn', text: '⇪ Pegar lista', title: 'Pegar varios nombres de una', onclick: function () { U.emit('importarMiembros'); } })
+    ]);
+    c.appendChild(acciones);
+
     var buscar = U.el('input', { class: 'inp', placeholder: 'Filtrar por nombre, unidad o estado…' });
     c.appendChild(buscar);
+
     var wrap = U.el('div', { class: 'tabla-wrap' });
     var t = U.el('table', { class: 'tabla' });
-    t.appendChild(U.el('thead', {}, [U.el('tr', {}, ['Jugador', 'Unidad', 'Estado', 'Convocatorias', 'Asistencias', '%', 'Steam / ID'].map(function (h) { return U.el('th', { text: h }); }))]));
+    t.appendChild(U.el('thead', {}, [U.el('tr', {},
+      ['Jugador', 'Unidad', 'Estado', 'Convocatorias', 'Vino', 'Faltó', '%', 'Steam / ID', ''].map(function (h) { return U.el('th', { text: h }); })
+    )]));
     var tb = U.el('tbody');
-    t.appendChild(tb);
-    wrap.appendChild(t);
-    c.appendChild(wrap);
-    var asis = asistenciaPorJugador();
+    t.appendChild(tb); wrap.appendChild(t); c.appendChild(wrap);
 
     function pintar() {
+      var asis = asistenciaPorJugador();
       U.vaciar(tb);
       var q = buscar.value.trim().toLowerCase();
       U.state.miembros.filter(function (m) {
         return !q || (m.nombre + ' ' + m.unidad + ' ' + m.estado).toLowerCase().indexOf(q) >= 0;
       }).forEach(function (m) {
-        var a = asis[m.id] || { conv: 0, ok: 0 };
+        var a = asis[m.id] || { conv: 0, ok: 0, falta: 0 };
         var tr = U.el('tr');
         tr.appendChild(U.el('td', { class: 'nm', text: m.nombre }));
         tr.appendChild(U.el('td', { text: m.unidad || '—' }));
-        tr.appendChild(U.el('td', {}, [U.el('span', { class: 'pill', style: { '--c': TONOS[m.estado] || '#5a4d2a' }, text: m.estado })]));
+        tr.appendChild(U.el('td', {}, [U.el('button', {
+          class: 'pill click', style: { '--c': tono(m.estado) }, text: m.estado,
+          title: 'Clic para pasar a ' + (U.ESTADO_SIGUIENTE[m.estado] || 'Activo'),
+          onclick: function () {
+            m.estado = U.ESTADO_SIGUIENTE[m.estado] || 'Activo';
+            U.save(); render();
+          }
+        })]));
         tr.appendChild(U.el('td', { text: a.conv }));
-        tr.appendChild(U.el('td', { text: a.ok }));
+        tr.appendChild(U.el('td', { class: a.ok ? 'bien' : '', text: a.ok }));
+        tr.appendChild(U.el('td', { class: a.falta ? 'mal' : '', text: a.falta }));
         tr.appendChild(U.el('td', { text: a.conv ? Math.round(a.ok / a.conv * 100) + '%' : '—' }));
         tr.appendChild(U.el('td', { class: 'mono', text: (m.steam || '').slice(0, 18) }));
-        tr.addEventListener('dblclick', function () { U.emit('editarMiembro', m); });
+        tr.appendChild(U.el('td', {}, [U.el('button', {
+          class: 'btn xs', text: 'editar', onclick: function () { U.emit('editarMiembro', m); }
+        })]));
         tb.appendChild(tr);
       });
     }

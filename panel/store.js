@@ -38,6 +38,19 @@ U.nuevaPartida = function (nombre) {
 };
 
 /* ---------- carga / guardado ---------- */
+U.estadoInicial = function () {
+  return {
+    v: 2,
+    miembros: (U.MEMBERS_SEED || []).map(function (m) {
+      return Object.assign({ notas: '', partidas: 0, asistencias: 0 }, m);
+    }),
+    partidas: [],
+    activa: null,
+    ui: { tab: 'partidas' }
+  };
+};
+
+/* carga sincrónica desde este navegador (siempre disponible) */
 U.load = function () {
   var raw = null;
   try { raw = localStorage.getItem(U.KEY); } catch (e) { }
@@ -47,17 +60,24 @@ U.load = function () {
       if (s && s.miembros) { U.state = s; U.migrar(); return; }
     } catch (e) { console.warn('estado corrupto, se regenera', e); }
   }
-  U.state = {
-    v: 1,
-    miembros: (U.MEMBERS_SEED || []).map(function (m) { return Object.assign({ notas: '', partidas: 0, asistencias: 0 }, m); }),
-    partidas: [],
-    activa: null,
-    ui: { tab: 'dashboard' }
-  };
-  var p = U.nuevaPartida('Próxima partida');
-  U.state.partidas.push(p);
-  U.state.activa = p.id;
-  U.save();
+  U.state = U.estadoInicial();
+  U.save(true);
+};
+
+/* si hay base en la nube, manda ella: pisa lo local y lo deja cacheado */
+U.sincronizarInicio = function () {
+  return U.db.detectar().then(function (modo) {
+    if (modo !== 'nube') return 'local';
+    return U.db.cargarTodo().then(function (r) {
+      if (!r) return 'local';
+      if (r.miembros && r.miembros.length) U.state.miembros = r.miembros;
+      else U.db.guardarMiembros(U.state.miembros);          // base vacía: la sembramos
+      if (r.partidas) U.state.partidas = r.partidas;
+      U.migrar();
+      try { localStorage.setItem(U.KEY, JSON.stringify(U.state)); } catch (e) { }
+      return 'nube';
+    });
+  });
 };
 
 U.migrar = function () {
@@ -65,6 +85,8 @@ U.migrar = function () {
     if (m.partidas == null) m.partidas = 0;
     if (m.asistencias == null) m.asistencias = 0;
     if (!m.dias) m.dias = [];
+    // los seis estados del Excel pasaron a tres con semáforo
+    if (U.ESTADOS.indexOf(m.estado) < 0) m.estado = U.ESTADO_VIEJO[m.estado] || 'Tibio';
   });
   U.state.partidas.forEach(function (p) {
     if (!p.strat) p.strat = { mapa: p.mapa || 'carentan', activa: 0, slides: [{ id: U.uid('s'), nombre: 'Apertura', objs: [] }] };
@@ -79,6 +101,12 @@ U.migrar = function () {
     if (!p.strat.slides.length) p.strat.slides.push({ id: U.uid('s'), nombre: 'Apertura', objs: [] });
     if (!p.extraSlots) p.extraSlots = {};
     if (!p.reservas) p.reservas = [];
+    // la asistencia pasó de booleano (vino sí/no) a tres estados
+    Object.keys(p.asignaciones).forEach(function (k) {
+      var a = p.asignaciones[k];
+      if (!a) return;
+      if (a.est === undefined) { a.est = a.ok ? 'ok' : ''; delete a.ok; }
+    });
   });
   if (!U.state.activa || !U.partida()) U.state.activa = U.state.partidas[0] && U.state.partidas[0].id;
 };
@@ -96,19 +124,41 @@ U.reescalar = function (st, k) {
   });
 };
 
-var saveT = null;
+var saveT = null, nubeT = null;
 U.save = function (inmediato) {
   clearTimeout(saveT);
   var doIt = function () {
     try {
       localStorage.setItem(U.KEY, JSON.stringify(U.state));
-      U.flashSave('guardado');
+      U.flashSave(U.db.esNube() ? 'guardado' : 'guardado local');
     } catch (e) {
       U.flashSave('sin espacio', true);
       console.error(e);
     }
+    empujarNube();
   };
   if (inmediato) doIt(); else saveT = setTimeout(doIt, 250);
+};
+
+/* manda a la nube lo que se está editando: la base de jugadores y la
+   partida activa. Con 1,5s de gracia para no escribir en cada tecla. */
+function empujarNube() {
+  if (!U.db.esNube()) return;
+  clearTimeout(nubeT);
+  nubeT = setTimeout(function () {
+    U.db.guardarMiembros(U.state.miembros);
+    var p = U.partida();
+    if (p) U.db.guardarPartida(p);
+  }, 1500);
+}
+U.empujarNube = empujarNube;
+
+/* borrar una partida en los dos lados */
+U.borrarPartida = function (id) {
+  U.state.partidas = U.state.partidas.filter(function (p) { return p.id !== id; });
+  if (U.state.activa === id) U.state.activa = (U.state.partidas[0] || {}).id || null;
+  U.db.borrarPartida(id);
+  U.save(true);
 };
 
 U.flashSave = function (txt, err) {
@@ -151,14 +201,17 @@ U.asignar = function (gid, i, memberId) {
   else {
     // un jugador puede repetirse (tarea de apertura + escuadra), pero no
     // dos veces en el mismo bloque
-    p.asignaciones[k] = { m: memberId, ok: (p.asignaciones[k] || {}).ok || false };
+    p.asignaciones[k] = { m: memberId, est: (p.asignaciones[k] || {}).est || '' };
   }
   U.save(); U.emit('roster');
 };
-U.togglePresente = function (gid, i) {
+/* ciclo de asistencia: sin marcar -> vino -> faltó -> sin marcar */
+U.ciclarAsistencia = function (gid, i) {
   var p = U.partida(); if (!p) return;
   var a = p.asignaciones[gid + ':' + i];
-  if (a) { a.ok = !a.ok; U.save(); U.emit('roster'); }
+  if (!a) return;
+  a.est = U.ASISTENCIA_SIGUIENTE[a.est || ''];
+  U.save(); U.emit('roster');
 };
 
 /* dónde está asignado un miembro (devuelve lista de grupos) */
@@ -180,23 +233,35 @@ U.plantel = function (gid) {
   var slots = U.slotsDe(gid), out = [];
   slots.forEach(function (rol, i) {
     var a = p.asignaciones[gid + ':' + i];
-    if (a && a.m) out.push({ rol: rol, id: a.m, nombre: U.nombreMiembro(a.m), ok: a.ok, i: i });
+    if (a && a.m) out.push({ rol: rol, id: a.m, nombre: U.nombreMiembro(a.m), est: a.est || '', i: i });
   });
   return out;
 };
 
-/* contadores del pie de la hoja */
+/* contadores del pie de la hoja.
+   Un jugador cuenta una sola vez aunque esté en dos bloques. */
 U.contadores = function () {
-  var p = U.partida(); if (!p) return { total: 0, asistieron: 0, faltaron: 0 };
-  var total = 0, ok = 0, vistos = {};
+  var p = U.partida();
+  var vacio = { total: 0, asistieron: 0, faltaron: 0, sinMarcar: 0 };
+  if (!p) return vacio;
+  var est = {};
   Object.keys(p.asignaciones).forEach(function (k) {
     var a = p.asignaciones[k];
     if (!a || !a.m) return;
-    if (vistos[a.m]) { if (a.ok) vistos[a.m] = 2; return; }
-    vistos[a.m] = a.ok ? 2 : 1;
+    var e = a.est || '';
+    // gana la marca más fuerte: vino > faltó > sin marcar
+    if (est[a.m] === 'ok') return;
+    if (e === 'ok' || !est[a.m] || (est[a.m] === '' && e)) est[a.m] = e;
   });
-  Object.keys(vistos).forEach(function (id) { total++; if (vistos[id] === 2) ok++; });
-  return { total: total, asistieron: ok, faltaron: total - ok };
+  var r = { total: 0, asistieron: 0, faltaron: 0, sinMarcar: 0 };
+  Object.keys(est).forEach(function (id) {
+    r.total++;
+    if (est[id] === 'ok') r.asistieron++;
+    else if (est[id] === 'falta') r.faltaron++;
+    else r.sinMarcar++;
+  });
+  r.estados = est;
+  return r;
 };
 
 /* ---------- eventos internos ---------- */
@@ -219,6 +284,7 @@ U.shots = (function () {
   }
   return {
     put: function (id, dataUrl) {
+      U.db.guardarCaptura(id, dataUrl);   // que la vean los demás
       return db().then(function (d) {
         return new Promise(function (res, rej) {
           var tx = d.transaction('shots', 'readwrite');
@@ -235,6 +301,18 @@ U.shots = (function () {
           var q = tx.objectStore('shots').get(id);
           q.onsuccess = function () { res(q.result || null); };
           q.onerror = function () { rej(q.error); };
+        });
+      }).then(function (local) {
+        if (local) return local;
+        // no está en este navegador: la pedimos a la base y la cacheamos
+        return U.db.leerCaptura(id).then(function (remota) {
+          if (remota) {
+            db().then(function (d) {
+              var tx = d.transaction('shots', 'readwrite');
+              tx.objectStore('shots').put(remota, id);
+            });
+          }
+          return remota;
         });
       });
     },

@@ -138,7 +138,21 @@ U.map = function (id) { return U.MAPS.find(m => m.id === id) || U.MAPS[0]; };
 
 U.BANDOS = ['Aliados', 'Eje', 'US', 'Wehrmacht', 'British', 'Soviético', 'DAK'];
 U.MODOS  = ['Warfare', 'Offensive', 'Skirmish', '18v18', '36v36', '49v49'];
-U.ESTADOS = ['Activo', 'Contactado', 'Comprometido', 'Inalcanzable', 'Reserva', 'Retirado'];
+/* Estado del jugador: tres, con semáforo.
+   Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más */
+U.ESTADOS = ['Activo', 'Tibio', 'Inactivo'];
+U.ESTADO_COLOR = { 'Activo': '#6f8a3f', 'Tibio': '#d9a62e', 'Inactivo': '#b0432f' };
+U.ESTADO_SIGUIENTE = { 'Activo': 'Tibio', 'Tibio': 'Inactivo', 'Inactivo': 'Activo' };
+/* equivalencias de los estados viejos del Excel */
+U.ESTADO_VIEJO = {
+  'Activo': 'Activo', 'Comprometido': 'Activo',
+  'Contactado': 'Tibio', 'Reserva': 'Tibio',
+  'Inalcanzable': 'Inactivo', 'Retirado': 'Inactivo'
+};
+
+/* Marca de asistencia por partida y por slot */
+U.ASISTENCIA = { '': 'sin marcar', 'ok': 'vino', 'falta': 'faltó' };
+U.ASISTENCIA_SIGUIENTE = { '': 'ok', 'ok': 'falta', 'falta': '' };
 U.UNIDADES_MIEMBRO = ['Infantería', 'Oficiales', 'Tanquistas', 'Artillería', 'Recon', 'Comandante', 'Invitado', 'Reservas'];
 U.DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 

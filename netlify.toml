@@ -1,0 +1,13 @@
+# Sitio estático + una función para la base de datos del panel.
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+
+# cache largo para las texturas de mapa (no cambian nunca)
+[[headers]]
+  for = "/media/maps/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

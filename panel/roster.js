@@ -74,12 +74,20 @@ U.roster = (function () {
   function slotRow(g, rol, i) {
     var a = U.asig(g.id, i);
     var esExtra = i >= g.slots.length;
-    var row = U.el('div', { class: 'r-slot' + (a ? ' lleno' : '') + (a && a.ok ? ' ok' : '') });
+    var est = a ? (a.est || '') : '';
+    var row = U.el('div', { class: 'r-slot' + (a ? ' lleno' : '') + (est ? ' e-' + est : '') });
 
+    /* asistencia: sin marcar -> vino -> faltó */
     row.appendChild(U.el('span', {
-      class: 'chk', text: a && a.ok ? '✔' : '', title: 'Vino / no vino',
-      onclick: function (e) { e.stopPropagation(); U.togglePresente(g.id, i); render(); }
+      class: 'chk', text: est === 'ok' ? '✔' : est === 'falta' ? '✕' : '',
+      title: a ? 'Sin marcar / vino / faltó' : 'Primero asigná un jugador',
+      onclick: function (e) {
+        e.stopPropagation();
+        if (!a) return;
+        U.ciclarAsistencia(g.id, i); render();
+      }
     }));
+
     row.appendChild(U.el('span', { class: 'rol', html: '<i>' + U.roleIco(rol) + '</i>' + rol }));
 
     var nm = U.el('span', {
@@ -92,18 +100,28 @@ U.roster = (function () {
         });
       }
     });
-    if (a) { nm.draggable = true; nm.addEventListener('dragstart', function (e) { arrastrando = { m: a.m, from: [g.id, i] }; e.dataTransfer.setData('text/plain', a.m); }); }
+    if (a) {
+      nm.draggable = true;
+      nm.addEventListener('dragstart', function (e) { arrastrando = { m: a.m, from: [g.id, i] }; e.dataTransfer.setData('text/plain', a.m); });
+    }
     row.appendChild(nm);
 
-    if (esExtra) row.appendChild(U.el('span', {
-      class: 'del', text: '×', title: 'Quitar slot',
-      onclick: function () {
+    var acc = U.el('span', { class: 'acc' });
+    if (a) acc.appendChild(U.el('button', {
+      class: 'quitar', text: '✕', title: 'Sacar a ' + U.nombreMiembro(a.m) + ' de este puesto',
+      onclick: function (e) { e.stopPropagation(); U.asignar(g.id, i, null); render(); }
+    }));
+    if (esExtra) acc.appendChild(U.el('button', {
+      class: 'quitar slot', text: '⌫', title: 'Eliminar este slot extra',
+      onclick: function (e) {
+        e.stopPropagation();
         var p = U.partida();
         p.extraSlots[g.id].splice(i - g.slots.length, 1);
         delete p.asignaciones[g.id + ':' + i];
         U.save(); render();
       }
     }));
+    row.appendChild(acc);
 
     row.addEventListener('dragover', function (e) { e.preventDefault(); row.classList.add('drop'); });
     row.addEventListener('dragleave', function () { row.classList.remove('drop'); });
@@ -112,7 +130,7 @@ U.roster = (function () {
       var id = (arrastrando && arrastrando.m) || e.dataTransfer.getData('text/plain');
       if (!id) return;
       if (arrastrando && arrastrando.from) U.asignar(arrastrando.from[0], arrastrando.from[1], null);
-      if (arrastrando && arrastrando.reserva) quitarReserva(id);
+      quitarReserva(id);
       U.asignar(g.id, i, id);
       arrastrando = null; render();
     });
@@ -124,7 +142,7 @@ U.roster = (function () {
     var c = U.contadores();
     var caja = U.el('div', { class: 'r-bloque t-cont' });
     caja.appendChild(U.el('div', { class: 'r-bloque-head' }, [U.el('span', { class: 'ttl', text: 'CONTADORES' })]));
-    [['TOTAL PLAYERS', c.total, 'tot'], ['TOTAL ATTENDES', c.asistieron, 'ok'], ['TOTAL TRAITORS', c.faltaron, 'bad']]
+    [['CONVOCADOS', c.total, 'tot'], ['VINIERON', c.asistieron, 'ok'], ['FALTARON', c.faltaron, 'bad'], ['SIN MARCAR', c.sinMarcar, 'sm']]
       .forEach(function (r) {
         caja.appendChild(U.el('div', { class: 'r-cont ' + r[2] }, [
           U.el('span', { text: r[0] }), U.el('b', { text: r[1] })
@@ -232,11 +250,18 @@ U.roster = (function () {
         var color = gs.length ? U.unit(U.group(gs[0]).unidad).color : 'transparent';
         var row = U.el('div', {
           class: 'sb-row' + (gs.length ? ' asignado' : ''), draggable: 'true',
-          style: { '--c': color }
+          style: { '--c': color, '--e': U.ESTADO_COLOR[m.estado] || '#5a4d2a' }
         }, [
           U.el('span', { class: 'dot' }),
           U.el('span', { class: 'nm', text: m.nombre }),
-          U.el('span', { class: 'un', text: (m.unidad || '').slice(0, 3).toUpperCase() })
+          U.el('button', {
+            class: 'est', title: 'Estado: ' + m.estado + ' (clic para cambiar)',
+            onclick: function (e) {
+              e.stopPropagation();
+              m.estado = U.ESTADO_SIGUIENTE[m.estado] || 'Activo';
+              U.save(); pintarLista(); U.emit('dash');
+            }
+          })
         ]);
         row.addEventListener('dragstart', function (e) { arrastrando = { m: m.id }; e.dataTransfer.setData('text/plain', m.id); });
         row.addEventListener('dblclick', function () { editarJugador(m); });
@@ -262,6 +287,7 @@ U.roster = (function () {
     f.appendChild(U.campo('Discord', tmp.discord, function (v) { tmp.discord = v; }));
     f.appendChild(U.campo('Unidad', tmp.unidad, function (v) { tmp.unidad = v; }, { opciones: U.UNIDADES_MIEMBRO }));
     f.appendChild(U.campo('Estado', tmp.estado, function (v) { tmp.estado = v; }, { opciones: U.ESTADOS }));
+    f.appendChild(U.el('p', { class: 'ayuda', text: 'Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más.' }));
     var pie = U.el('div', { class: 'modal-pie' });
     var mm = U.modal(m.id ? 'Editar jugador' : 'Nuevo jugador', f, { pie: pie });
     if (m.id) pie.appendChild(U.el('button', {
@@ -307,6 +333,8 @@ U.roster = (function () {
   return {
     montar: function (nodoGrid, nodoSide) { cont = nodoGrid; side = nodoSide; render(); },
     render: render,
-    editar: editarJugador
+    editar: editarJugador,
+    nuevo: nuevoJugador,
+    importarLista: importarPegado
   };
 })();

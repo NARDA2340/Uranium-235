@@ -1,20 +1,29 @@
 /* ===================================================================
    sketch.js — el stratsketch propio.
-   SVG sobre el mapa táctico. Cada objeto puede pertenecer a un grupo
-   del roster: ahí está la gracia — el dibujo hereda el color y la
-   leyenda de la derecha muestra QUIÉN va en ese color.
+
+   Decisiones de diseño:
+   · El mapa está FIJO: se ve entero siempre, no se mueve ni se hace
+     zoom. Así el trazo cae exactamente donde apuntás.
+   · Las coordenadas se calculan con getScreenCTM (matriz real del
+     SVG), no a ojo: aunque la ventana cambie, el dibujo no se corre.
+   · Cada objeto puede pertenecer a un grupo del roster: hereda su
+     color y la leyenda de la derecha dice quién va ahí.
+   · Ctrl+Z / Ctrl+Y sobre cada slide.
    =================================================================== */
 window.U = window.U || {};
 
 U.sketch = (function () {
-  var host, svg, gMapa, gObjs, gTmp, leyenda, slidesBar, toolbar;
-  var VB = { x: 0, y: 0, w: 2000, h: 2000 };   // viewBox actual
-  var NAT = { w: 2000, h: 2000 };              // tamaño natural del mapa
-  var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55', grosor = 6, iconoActivo = 'garrison';
-  var sel = null, dibujando = null, panning = null, shotsCache = {};
+  var host, svg, gMapa, gObjs, gTmp, leyenda, slidesBar, toolbar, marcoMapa;
+  var NAT = { w: 1920, h: 1920 };
+  var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55';
+  var grosor = 7, escalaIcono = 1, iconoActivo = 'garrison';
+  var sel = null, dibujando = null, shotsCache = {};
+  var abierto = { iconos: false, mapa: false };
+  var historia = {}, futuro = {};
 
   /* ---------------- helpers ---------------- */
   function P() { return U.partida(); }
+  function hay() { return !!(P() && P().strat); }
   function strat() { return P().strat; }
   function slide() { var s = strat(); return s.slides[Math.min(s.activa, s.slides.length - 1)]; }
   function objs() { return slide().objs; }
@@ -26,19 +35,45 @@ U.sketch = (function () {
     if (grupoActivo === '__libre') return colorLibre;
     var g = U.group(grupoActivo); return g ? U.unit(g.unidad).color : colorLibre;
   }
-  function svgPt(e) {
-    var r = svg.getBoundingClientRect();
-    return {
-      x: VB.x + (e.clientX - r.left) / r.width * VB.w,
-      y: VB.y + (e.clientY - r.top) / r.height * VB.h
-    };
-  }
   function ns(t, a) {
     var n = document.createElementNS('http://www.w3.org/2000/svg', t);
     if (a) Object.keys(a).forEach(function (k) { if (a[k] !== null && a[k] !== undefined) n.setAttribute(k, a[k]); });
     return n;
   }
   function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+  /* punto exacto del mapa bajo el cursor */
+  function svgPt(e) {
+    var pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    var m = svg.getScreenCTM();
+    if (!m) return { x: 0, y: 0 };
+    var p = pt.matrixTransform(m.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  /* ---------------- historial ---------------- */
+  function snapshot() {
+    var id = slide().id;
+    (historia[id] = historia[id] || []).push(JSON.stringify(objs()));
+    if (historia[id].length > 60) historia[id].shift();
+    futuro[id] = [];
+    pintarAcciones();
+  }
+  function deshacer() {
+    var id = slide().id, h = historia[id] || [];
+    if (!h.length) { U.toast('Nada para deshacer'); return; }
+    (futuro[id] = futuro[id] || []).push(JSON.stringify(objs()));
+    slide().objs = JSON.parse(h.pop());
+    sel = null; U.save(); render();
+  }
+  function rehacer() {
+    var id = slide().id, f = futuro[id] || [];
+    if (!f.length) return;
+    (historia[id] = historia[id] || []).push(JSON.stringify(objs()));
+    slide().objs = JSON.parse(f.pop());
+    sel = null; U.save(); render();
+  }
 
   /* ---------------- montaje ---------------- */
   function montar(nodo) {
@@ -52,46 +87,57 @@ U.sketch = (function () {
     host.appendChild(lienzo);
     host.appendChild(leyenda);
 
+    marcoMapa = U.el('div', { class: 'sk-marco' });
     svg = ns('svg', { class: 'sk-svg', xmlns: 'http://www.w3.org/2000/svg' });
     gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g');
     svg.appendChild(gMapa); svg.appendChild(gObjs); svg.appendChild(gTmp);
-    lienzo.appendChild(svg);
+    marcoMapa.appendChild(svg);
+    lienzo.appendChild(marcoMapa);
 
     slidesBar = U.el('div', { class: 'sk-slides' });
     lienzo.appendChild(slidesBar);
 
     eventos();
+    if (!hay()) { vacio(); return; }
     pintarTools();
     cargarMapa();
     render();
   }
 
-  /* ---------------- mapa: capas ---------------- */
+  /* sin partida elegida todavía */
+  function vacio() {
+    U.vaciar(toolbar); U.vaciar(leyenda); U.vaciar(slidesBar); U.vaciar(gMapa); U.vaciar(gObjs);
+    leyenda.appendChild(U.el('p', {
+      class: 'ley-vacio',
+      text: 'Elegí una partida en la pestaña Partidas para empezar a dibujar.'
+    }));
+    svg.setAttribute('viewBox', '0 0 100 100');
+  }
+
+  /* ---------------- mapa (fijo) ---------------- */
   function capas() {
     var st = strat();
     if (!st.capas) st.capas = { grid: true, puntos: true };
     return st.capas;
   }
-
   function imagen(src, w, h) {
     var im = ns('image', { x: 0, y: 0, width: w, height: h, preserveAspectRatio: 'none' });
     im.setAttributeNS('http://www.w3.org/1999/xlink', 'href', src);
     im.setAttribute('href', src);
     return im;
   }
-
-  function cargarMapa(sinEncuadrar) {
+  function cargarMapa() {
+    if (!hay()) return;
     U.vaciar(gMapa);
     var m = U.map(strat().mapa), c = capas(), E = U.ESPACIO;
 
     if (strat().imgPropia) {
-      // mapa subido a mano: se estira al ancho del espacio y se respeta su alto
       var img = new Image();
       img.onload = function () {
         NAT = { w: E, h: Math.round(E * img.naturalHeight / img.naturalWidth) };
         U.vaciar(gMapa);
         gMapa.appendChild(imagen(strat().imgPropia, NAT.w, NAT.h));
-        aplicarVB(!sinEncuadrar); render();
+        encuadrar(); render();
       };
       img.onerror = function () { strat().imgPropia = null; U.save(); cargarMapa(); };
       img.src = strat().imgPropia;
@@ -103,130 +149,223 @@ U.sketch = (function () {
     if (m.base) gMapa.appendChild(imagen(m.base, E, E));
     if (c.grid && U.MAPA_GRID) gMapa.appendChild(imagen(U.MAPA_GRID, E, E));
     if (c.puntos && m.capaPuntos) gMapa.appendChild(imagen(m.capaPuntos, E, E));
-    aplicarVB(!sinEncuadrar);
+    encuadrar();
   }
-
-  function aplicarVB(reset) {
-    if (reset || !VB.w || VB.w <= 0) VB = { x: 0, y: 0, w: NAT.w, h: NAT.h };
-    svg.setAttribute('viewBox', VB.x + ' ' + VB.y + ' ' + VB.w + ' ' + VB.h);
+  function encuadrar() {
+    svg.setAttribute('viewBox', '0 0 ' + NAT.w + ' ' + NAT.h);
+    // el marco toma la proporción del mapa: así no quedan bandas negras
+    if (marcoMapa) marcoMapa.style.aspectRatio = (NAT.w / NAT.h).toFixed(4);
   }
 
   /* ---------------- barra de herramientas ---------------- */
   var TOOLS = [
-    { id: 'sel', ico: '➚', t: 'Seleccionar / mover (V)' },
-    { id: 'pen', ico: '✎', t: 'Trazo libre (P)' },
-    { id: 'line', ico: '↗', t: 'Flecha (L)' },
-    { id: 'rect', ico: '▭', t: 'Zona rectangular (R)' },
-    { id: 'poly', ico: '⬠', t: 'Zona poligonal (G) — doble clic cierra' },
-    { id: 'circle', ico: '◯', t: 'Radio / círculo (C)' },
-    { id: 'icon', ico: '⚑', t: 'Ícono táctico (I)' },
-    { id: 'text', ico: 'T', t: 'Texto (T)' },
-    { id: 'pin', ico: '📷', t: 'Pin con captura real (S)' },
-    { id: 'del', ico: '⌫', t: 'Borrar (clic en el objeto)' }
+    { id: 'sel', ico: '➚', t: 'Seleccionar y mover · V' },
+    { id: 'pen', ico: '✎', t: 'Trazo libre · P — mantené apretado para el grosor' },
+    { id: 'line', ico: '↗', t: 'Flecha · L — mantené apretado para el grosor' },
+    { id: 'rect', ico: '▭', t: 'Zona rectangular · R' },
+    { id: 'poly', ico: '⬠', t: 'Zona libre · G — doble clic cierra' },
+    { id: 'circle', ico: '◯', t: 'Radio · C' },
+    { id: 'icon', ico: '⚑', t: 'Ícono táctico · I — mantené apretado para el tamaño' },
+    { id: 'text', ico: 'T', t: 'Texto · T — mantené apretado para el tamaño' },
+    { id: 'pin', ico: '⬚', t: 'Pin con captura real · S' },
+    { id: 'del', ico: '⌫', t: 'Borrar: clic sobre el objeto · Supr' }
   ];
 
   function pintarTools() {
+    if (!hay()) return;
     U.vaciar(toolbar);
 
-    var gt = U.el('div', { class: 'sk-grp' });
+    /* --- herramientas --- */
+    var gt = U.el('div', { class: 'sk-grid-tools' });
     TOOLS.forEach(function (t) {
-      gt.appendChild(U.el('button', {
+      var b = U.el('button', {
         class: 'sk-tool' + (tool === t.id ? ' on' : ''), title: t.t, html: t.ico,
-        onclick: function () { tool = t.id; sel = null; pintarTools(); render(); }
-      }));
+        onclick: function () { tool = t.id; sel = null; cerrarPop(); pintarTools(); render(); }
+      });
+      mantener(b, function () { popTamano(b, t.id); });
+      gt.appendChild(b);
     });
     toolbar.appendChild(gt);
 
-    /* selector de grupo = selector de color, pero con identidad */
+    /* --- deshacer / rehacer --- */
+    var acc = U.el('div', { class: 'sk-grid-tools chico', id: 'sk-acciones' });
+    acc.appendChild(U.el('button', { class: 'sk-tool', html: '↶', title: 'Deshacer · Ctrl+Z', onclick: deshacer }));
+    acc.appendChild(U.el('button', { class: 'sk-tool', html: '↷', title: 'Rehacer · Ctrl+Y', onclick: rehacer }));
+    toolbar.appendChild(acc);
+
+    /* --- grupos (el color con identidad) --- */
     toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Grupo' }));
-    var gg = U.el('div', { class: 'sk-grupos' });
-    U.ROSTER.filter(function (g) { return g.tipo === 'escuadra' || g.tipo === 'tanque' || ['commander', 'recon1', 'recon2', 'arty', 'wamo'].indexOf(g.id) >= 0; })
-      .forEach(function (g) {
-        var u = U.unit(g.unidad);
-        var n = U.plantel(g.id).length;
-        gg.appendChild(U.el('button', {
-          class: 'sk-grupo' + (grupoActivo === g.id ? ' on' : ''),
-          style: { '--c': u.color }, title: g.titulo + ' · ' + n + ' jugadores',
-          html: '<i></i><span>' + g.titulo.replace(/ ·.*/, '').replace('TANQUE ', 'T') + '</span><b>' + n + '</b>',
-          onclick: function () {
-            grupoActivo = g.id;
-            if (sel) { sel.grupo = g.id; delete sel.color; guardar(); }
-            pintarTools(); render();
-          }
-        }));
+    var gg = U.el('div', { class: 'sk-swatches' });
+    gruposDibujables().forEach(function (g) {
+      var u = U.unit(g.unidad);
+      gg.appendChild(U.el('button', {
+        class: 'sw' + (grupoActivo === g.id ? ' on' : ''),
+        style: { '--c': u.color },
+        title: g.titulo + ' · ' + U.plantel(g.id).length + ' jugadores',
+        text: corto(g),
+        onclick: function () {
+          grupoActivo = g.id;
+          if (sel) { snapshot(); sel.grupo = g.id; delete sel.color; U.save(); }
+          pintarTools(); render();
+        }
+      }));
+    });
+    var libre = U.el('button', {
+      class: 'sw libre' + (grupoActivo === '__libre' ? ' on' : ''),
+      style: { '--c': colorLibre }, title: 'Color libre, sin grupo', text: '···'
+    });
+    libre.addEventListener('click', function () {
+      grupoActivo = '__libre';
+      var inp = U.el('input', { type: 'color', value: colorLibre, class: 'oculto' });
+      document.body.appendChild(inp);
+      inp.addEventListener('input', function () {
+        colorLibre = inp.value;
+        if (sel) { snapshot(); sel.color = colorLibre; delete sel.grupo; U.save(); }
+        pintarTools(); render();
       });
-    gg.appendChild(U.el('button', {
-      class: 'sk-grupo libre' + (grupoActivo === '__libre' ? ' on' : ''),
-      style: { '--c': colorLibre }, title: 'Color libre (sin grupo)',
-      html: '<i></i><span>LIBRE</span>',
-      onclick: function () { grupoActivo = '__libre'; pintarTools(); }
-    }));
+      inp.addEventListener('change', function () { inp.remove(); });
+      inp.click();
+      pintarTools();
+    });
+    gg.appendChild(libre);
     toolbar.appendChild(gg);
 
-    var cl = U.el('input', { type: 'color', class: 'sk-color', value: colorLibre });
-    cl.addEventListener('input', function () {
-      colorLibre = cl.value; grupoActivo = '__libre';
-      if (sel) { sel.color = colorLibre; delete sel.grupo; guardar(); }
-      pintarTools(); render();
-    });
-    toolbar.appendChild(cl);
-
-    toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Trazo' }));
-    var gr = U.el('div', { class: 'sk-grp' });
-    [3, 6, 10, 16].forEach(function (w) {
-      gr.appendChild(U.el('button', {
-        class: 'sk-tool w' + (grosor === w ? ' on' : ''),
-        html: '<span style="height:' + Math.max(2, w / 2) + 'px"></span>',
-        onclick: function () { grosor = w; if (sel) { sel.grosor = w; guardar(); } pintarTools(); render(); }
-      }));
-    });
-    toolbar.appendChild(gr);
-
-    toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Íconos' }));
-    var gi = U.el('div', { class: 'sk-iconos' });
-    U.ICONS.forEach(function (ic) {
-      var b = U.el('button', {
-        class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : ''), title: ic.nombre,
-        onclick: function () { iconoActivo = ic.id; tool = 'icon'; pintarTools(); }
+    /* --- íconos, plegable --- */
+    toolbar.appendChild(plegable('Íconos', 'iconos', function (caja) {
+      var gi = U.el('div', { class: 'sk-iconos' });
+      U.ICONS.forEach(function (ic) {
+        var b = U.el('button', {
+          class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : ''), title: ic.nombre,
+          onclick: function () { iconoActivo = ic.id; tool = 'icon'; pintarTools(); }
+        });
+        var s = ns('svg', { viewBox: '-24 -24 48 48' });
+        s.innerHTML = iconSVG(ic.id, colorActual());
+        b.appendChild(s);
+        gi.appendChild(b);
       });
-      var s = ns('svg', { viewBox: '-24 -24 48 48' });
-      s.innerHTML = iconSVG(ic.id, colorActual());
-      b.appendChild(s);
-      gi.appendChild(b);
-    });
-    toolbar.appendChild(gi);
+      caja.appendChild(gi);
+    }));
 
-    toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Mapa' }));
-    var acc = U.el('div', { class: 'sk-grp col' });
+    /* --- mapa, plegable --- */
+    toolbar.appendChild(plegable('Mapa', 'mapa', function (caja) {
+      var selMapa = U.el('select', { class: 'inp sm' });
+      U.MAPS.forEach(function (m) {
+        selMapa.appendChild(U.el('option', { value: m.id, text: m.nombre, selected: m.id === strat().mapa ? 'selected' : null }));
+      });
+      selMapa.addEventListener('change', function () {
+        var p = U.partida();
+        strat().mapa = selMapa.value; strat().imgPropia = null;
+        p.mapa = selMapa.value; p.punto = '';
+        U.save(); cargarMapa(); render(); U.emit('dash'); U.emit('mapa');
+      });
+      caja.appendChild(selMapa);
 
-    var selMapa = U.el('select', { class: 'inp sm' });
-    U.MAPS.forEach(function (m) {
-      selMapa.appendChild(U.el('option', { value: m.id, text: m.nombre, selected: m.id === strat().mapa ? 'selected' : null }));
-    });
-    selMapa.addEventListener('change', function () {
-      var p = U.partida();
-      strat().mapa = selMapa.value; strat().imgPropia = null;
-      p.mapa = selMapa.value; p.punto = '';
-      U.save(); cargarMapa(); render(); U.emit('dash'); U.emit('mapa');
-    });
-    acc.appendChild(selMapa);
+      var cps = capas();
+      [['grid', 'Cuadrícula'], ['puntos', 'Puntos y nombres']].forEach(function (c) {
+        caja.appendChild(U.el('button', {
+          class: 'sk-capa' + (cps[c[0]] ? ' on' : ''), text: c[1],
+          onclick: function () { cps[c[0]] = !cps[c[0]]; U.save(); cargarMapa(); pintarTools(); }
+        }));
+      });
+      caja.appendChild(U.el('button', { class: 'btn sm', text: 'Subir otra imagen', onclick: subirMapa }));
+      caja.appendChild(U.el('p', { class: 'sk-credito', html: 'Texturas del juego + capas de <b>Maps Let Loose</b>.' }));
+    }));
 
-    var cps = capas();
-    [['grid', 'Cuadrícula'], ['puntos', 'Puntos y recursos']].forEach(function (c) {
-      acc.appendChild(U.el('button', {
-        class: 'sk-capa' + (cps[c[0]] ? ' on' : ''), text: c[1],
-        onclick: function () { cps[c[0]] = !cps[c[0]]; U.save(); cargarMapa(true); pintarTools(); }
-      }));
-    });
+    /* --- acciones finales --- */
+    var fin = U.el('div', { class: 'sk-grp col' });
+    fin.appendChild(U.el('button', { class: 'btn sm primary', text: '▶ Presentar', onclick: presentar }));
+    fin.appendChild(U.el('button', {
+      class: 'btn sm ghost', text: 'Limpiar slide', onclick: function () {
+        U.confirmar('¿Borrar todo lo dibujado en esta slide?', function () {
+          snapshot(); slide().objs = []; sel = null; U.save(); render();
+        });
+      }
+    }));
+    toolbar.appendChild(fin);
+  }
 
-    acc.appendChild(U.el('button', { class: 'btn sm', text: 'Cargar imagen', onclick: subirMapa }));
-    acc.appendChild(U.el('button', { class: 'btn sm', text: 'Encuadrar', onclick: function () { aplicarVB(true); render(); } }));
-    acc.appendChild(U.el('button', { class: 'btn sm', text: 'Limpiar slide', onclick: function () {
-      U.confirmar('¿Borrar todo lo dibujado en esta slide?', function () { slide().objs = []; guardar(); render(); });
-    } }));
-    acc.appendChild(U.el('button', { class: 'btn sm primary', text: '▶ Presentar', onclick: presentar }));
-    toolbar.appendChild(acc);
-    toolbar.appendChild(U.el('p', { class: 'sk-credito', html: 'Capas de mapa: texturas del juego + overlays de <b>Maps Let Loose</b>.' }));
+  function corto(g) {
+    return g.titulo
+      .replace(/ ·.*/, '')
+      .replace('TANQUE ', 'T')
+      .replace('INCURSOR (WAMO)', 'WAMO')
+      .replace('ARTILLERÍA', 'ARTY')
+      .replace('COMMANDER', 'CMD')
+      .replace('RED | ROJO', 'NORTE')
+      .replace('GREEN | VERDE', 'CENTRO')
+      .replace('BLUE | AZUL', 'SUR')
+      .replace('ALFA | ARIETE', 'FLEX')
+      .replace('DEFENSE', 'DEF')
+      .replace('RECON ', 'REC ');
+  }
+  function gruposDibujables() {
+    return U.ROSTER.filter(function (g) {
+      return g.tipo === 'escuadra' || g.tipo === 'tanque' ||
+        ['commander', 'recon1', 'recon2', 'arty', 'wamo'].indexOf(g.id) >= 0;
+    });
+  }
+
+  function plegable(titulo, clave, armar) {
+    var wrap = U.el('div', { class: 'sk-pleg' + (abierto[clave] ? ' on' : '') });
+    wrap.appendChild(U.el('button', {
+      class: 'sk-pleg-t', html: titulo + '<i>' + (abierto[clave] ? '▾' : '▸') + '</i>',
+      onclick: function () { abierto[clave] = !abierto[clave]; pintarTools(); }
+    }));
+    if (abierto[clave]) {
+      var caja = U.el('div', { class: 'sk-pleg-c' });
+      armar(caja);
+      wrap.appendChild(caja);
+    }
+    return wrap;
+  }
+
+  /* --- mantener apretado para el tamaño --- */
+  function mantener(btn, fn) {
+    var t = null;
+    btn.addEventListener('pointerdown', function () { t = setTimeout(fn, 320); });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) {
+      btn.addEventListener(ev, function () { clearTimeout(t); });
+    });
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); fn(); });
+  }
+
+  var pop = null;
+  function cerrarPop() { if (pop) { pop.remove(); pop = null; } }
+  function popTamano(btn, cual) {
+    cerrarPop();
+    var esIcono = cual === 'icon', esTexto = cual === 'text';
+    var r = btn.getBoundingClientRect();
+    var valor = esIcono || esTexto ? escalaIcono : grosor;
+    var min = esIcono || esTexto ? 0.4 : 2, max = esIcono || esTexto ? 3 : 26, paso = esIcono || esTexto ? 0.1 : 1;
+
+    pop = U.el('div', { class: 'sk-pop', style: { top: (r.top) + 'px', left: (r.right + 8) + 'px' } });
+    pop.appendChild(U.el('span', { class: 't', text: esIcono || esTexto ? 'Tamaño' : 'Grosor' }));
+    var muestra = U.el('div', { class: 'muestra' });
+    var linea = U.el('div', { class: 'l', style: { background: colorActual() } });
+    muestra.appendChild(linea);
+    var val = U.el('b', { text: valor });
+    var rng = U.el('input', { type: 'range', min: min, max: max, step: paso, value: valor });
+
+    function aplicar(v) {
+      val.textContent = (esIcono || esTexto) ? Number(v).toFixed(1) + '×' : v;
+      linea.style.height = ((esIcono || esTexto) ? v * 7 : v) + 'px';
+      if (esIcono || esTexto) escalaIcono = Number(v); else grosor = Number(v);
+      if (sel) {
+        if (sel.tipo === 'icon') sel.escala = escalaIcono;
+        else if (sel.tipo === 'text') sel.size = Math.round(40 * escalaIcono);
+        else sel.grosor = grosor;
+        U.save(); render();
+      }
+    }
+    rng.addEventListener('input', function () { aplicar(rng.value); });
+    pop.appendChild(muestra); pop.appendChild(rng); pop.appendChild(val);
+    document.body.appendChild(pop);
+    aplicar(valor);
+
+    setTimeout(function () {
+      document.addEventListener('pointerdown', fuera, { once: true });
+    }, 50);
+    function fuera(e) { if (pop && !pop.contains(e.target)) cerrarPop(); }
   }
 
   function subirMapa() {
@@ -246,55 +385,52 @@ U.sketch = (function () {
     svg.addEventListener('pointerdown', down);
     svg.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    svg.addEventListener('contextmenu', function (e) { e.preventDefault(); });
-    svg.addEventListener('wheel', function (e) {
-      e.preventDefault();
-      var p = svgPt(e), f = e.deltaY > 0 ? 1.12 : 0.89;
-      var nw = Math.min(NAT.w * 2.5, Math.max(NAT.w * 0.03, VB.w * f));
-      var k = nw / VB.w;
-      VB.x = p.x - (p.x - VB.x) * k; VB.y = p.y - (p.y - VB.y) * k;
-      VB.w = VB.w * k; VB.h = VB.h * k;
-      aplicarVB();
-    }, { passive: false });
-
-    document.addEventListener('keydown', function (e) {
-      if (host && host.offsetParent === null) return;
-      if (/input|textarea|select/i.test((e.target.tagName || ''))) return;
-      var k = e.key.toLowerCase();
-      var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
-      if (mapa[k]) { tool = mapa[k]; pintarTools(); }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && sel) { borrar(sel); }
-      if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); render(); }
+    svg.addEventListener('dblclick', function () {
+      if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) cerrarPoly();
     });
 
-    /* pegar capturas directo con Ctrl+V */
+    document.addEventListener('keydown', function (e) {
+      if (!host || host.offsetParent === null || !hay()) return;
+      if (/input|textarea|select/i.test(e.target.tagName || '')) return;
+      var ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? rehacer() : deshacer(); return; }
+      if (ctrl && e.key.toLowerCase() === 'y') { e.preventDefault(); rehacer(); return; }
+      if (ctrl) return;
+      var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
+      var k = e.key.toLowerCase();
+      if (mapa[k]) { tool = mapa[k]; pintarTools(); }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && sel) borrar(sel);
+      if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); cerrarPop(); render(); }
+    });
+
     document.addEventListener('paste', function (e) {
       if (!host || host.offsetParent === null) return;
       var it = Array.prototype.slice.call(e.clipboardData.items).find(function (i) { return i.type.indexOf('image') === 0; });
       if (!it) return;
-      var f = it.getAsFile();
-      var centro = { x: VB.x + VB.w / 2, y: VB.y + VB.h / 2 };
-      crearPin(f, centro);
+      crearPin(it.getAsFile(), { x: NAT.w / 2, y: NAT.h / 2 });
     });
   }
 
-  function down(e) {
-    if (e.button === 1 || e.button === 2 || e.shiftKey) {
-      panning = { x: e.clientX, y: e.clientY, vb: Object.assign({}, VB) };
-      return;
-    }
-    var p = svgPt(e);
+  function objetoDe(e) {
     var hit = e.target.closest ? e.target.closest('[data-id]') : null;
-    var obj = hit ? objs().find(function (o) { return o.id === hit.getAttribute('data-id'); }) : null;
+    return hit ? objs().find(function (o) { return o.id === hit.getAttribute('data-id'); }) : null;
+  }
+
+  function down(e) {
+    if (e.button !== 0 || !hay()) return;
+    cerrarPop();
+    var p = svgPt(e);
+    var obj = objetoDe(e);
 
     if (tool === 'del') { if (obj) borrar(obj); return; }
+
     if (tool === 'sel') {
       sel = obj || null;
       if (obj) {
-        dibujando = { modo: 'mover', o: obj, p0: p, snap: JSON.parse(JSON.stringify(obj)) };
-        if (obj.grupo) { grupoActivo = obj.grupo; pintarTools(); }
-      } else {
-        panning = { x: e.clientX, y: e.clientY, vb: Object.assign({}, VB) };
+        snapshot();
+        dibujando = { modo: 'mover', o: obj, p0: p, snap: JSON.parse(JSON.stringify(obj)), movido: false };
+        if (obj.grupo) grupoActivo = obj.grupo;
+        pintarTools();
       }
       render();
       return;
@@ -304,13 +440,12 @@ U.sketch = (function () {
     if (tool === 'poly') {
       if (!dibujando || dibujando.modo !== 'poly') dibujando = { modo: 'poly', pts: [[p.x, p.y]] };
       else dibujando.pts.push([p.x, p.y]);
-      previa();
-      return;
+      previa(); return;
     }
-    if (tool === 'icon') { nuevo({ tipo: 'icon', icono: iconoActivo, x: p.x, y: p.y, escala: 1 }); return; }
+    if (tool === 'icon') { nuevo({ tipo: 'icon', icono: iconoActivo, x: p.x, y: p.y, escala: escalaIcono }); return; }
     if (tool === 'text') {
       var t = prompt('Texto:');
-      if (t) nuevo({ tipo: 'text', texto: t, x: p.x, y: p.y, size: Math.round(NAT.w / 46) });
+      if (t) nuevo({ tipo: 'text', texto: t, x: p.x, y: p.y, size: Math.round(40 * escalaIcono) });
       return;
     }
     if (tool === 'pin') {
@@ -322,18 +457,12 @@ U.sketch = (function () {
   }
 
   function move(e) {
-    if (panning) {
-      var r = svg.getBoundingClientRect();
-      VB.x = panning.vb.x - (e.clientX - panning.x) / r.width * VB.w;
-      VB.y = panning.vb.y - (e.clientY - panning.y) / r.height * VB.h;
-      aplicarVB();
-      return;
-    }
     if (!dibujando) return;
     var p = svgPt(e);
     if (dibujando.modo === 'pen') { dibujando.pts.push([p.x, p.y]); previa(); }
     else if (dibujando.modo === 'mover') {
       var dx = p.x - dibujando.p0.x, dy = p.y - dibujando.p0.y;
+      if (Math.abs(dx) + Math.abs(dy) > 2) dibujando.movido = true;
       var o = dibujando.o, s = dibujando.snap;
       if (s.pts) o.pts = s.pts.map(function (q) { return [q[0] + dx, q[1] + dy]; });
       if (s.x !== undefined) { o.x = s.x + dx; o.y = s.y + dy; }
@@ -345,27 +474,36 @@ U.sketch = (function () {
   }
 
   function up() {
-    panning = null;
     if (!dibujando) return;
     var d = dibujando;
     if (d.modo === 'pen') {
       if (d.pts.length > 2) nuevo({ tipo: 'pen', pts: simplificar(d.pts) });
       dibujando = null;
     } else if (d.modo === 'line') {
-      if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) > 8) nuevo({ tipo: 'line', x: d.a.x, y: d.a.y, x2: d.b.x, y2: d.b.y });
+      if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) > 10) nuevo({ tipo: 'line', x: d.a.x, y: d.a.y, x2: d.b.x, y2: d.b.y });
       dibujando = null;
     } else if (d.modo === 'rect') {
-      if (Math.abs(d.b.x - d.a.x) > 8) nuevo({ tipo: 'rect', x: Math.min(d.a.x, d.b.x), y: Math.min(d.a.y, d.b.y), w: Math.abs(d.b.x - d.a.x), h: Math.abs(d.b.y - d.a.y) });
+      if (Math.abs(d.b.x - d.a.x) > 10) nuevo({
+        tipo: 'rect', x: Math.min(d.a.x, d.b.x), y: Math.min(d.a.y, d.b.y),
+        w: Math.abs(d.b.x - d.a.x), h: Math.abs(d.b.y - d.a.y)
+      });
       dibujando = null;
     } else if (d.modo === 'circle') {
       var r = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
-      if (r > 8) nuevo({ tipo: 'circle', x: d.a.x, y: d.a.y, r: r });
+      if (r > 10) nuevo({ tipo: 'circle', x: d.a.x, y: d.a.y, r: r });
       dibujando = null;
     } else if (d.modo === 'mover') {
-      guardar(); dibujando = null;
+      if (d.movido) U.save(); else { (historia[slide().id] || []).pop(); }
+      dibujando = null;
     }
     U.vaciar(gTmp);
     render();
+  }
+
+  function cerrarPoly() {
+    if (!dibujando || dibujando.modo !== 'poly') return;
+    nuevo({ tipo: 'poly', pts: dibujando.pts.map(function (p) { return [Math.round(p[0]), Math.round(p[1])]; }) });
+    dibujando = null; U.vaciar(gTmp); render();
   }
 
   function simplificar(pts) {
@@ -379,22 +517,21 @@ U.sketch = (function () {
   }
 
   function nuevo(base) {
+    snapshot();
     var o = Object.assign({ id: U.uid('o'), grosor: grosor }, base);
     if (grupoActivo === '__libre') o.color = colorLibre; else o.grupo = grupoActivo;
     objs().push(o);
     sel = o;
     if (tool !== 'icon' && tool !== 'pen') tool = 'sel';
-    guardar(); pintarTools(); render();
+    U.save(); pintarTools(); render();
   }
 
   function borrar(o) {
+    snapshot();
     var i = objs().indexOf(o);
     if (i >= 0) objs().splice(i, 1);
-    if (o.shotId) U.shots.del(o.shotId);
-    sel = null; guardar(); render();
+    sel = null; U.save(); render();
   }
-
-  function guardar() { U.save(); }
 
   function crearPin(file, p) {
     U.optimizarImagen(file, 1600).then(function (r) {
@@ -420,17 +557,26 @@ U.sketch = (function () {
     if (d.modo === 'poly') gTmp.appendChild(ns('polygon', { points: d.pts.map(function (p) { return p.join(','); }).join(' '), fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
   }
 
-  function render(soloSvg) {
+  function render() {
     if (!svg) return;
+    if (!hay()) { vacio(); return; }
     U.vaciar(gObjs);
-    var lista = objs();
-    lista.forEach(function (o) { gObjs.appendChild(nodoDe(o)); });
-    if (!soloSvg) { pintarLeyenda(); pintarSlides(); }
+    objs().forEach(function (o) { gObjs.appendChild(nodoDe(o)); });
     svg.setAttribute('data-tool', tool);
+    pintarLeyenda();
+    pintarSlides();
+    pintarAcciones();
+  }
+
+  function pintarAcciones() {
+    var caja = U.$('#sk-acciones'); if (!caja) return;
+    var id = slide().id;
+    caja.children[0].disabled = !(historia[id] || []).length;
+    caja.children[1].disabled = !(futuro[id] || []).length;
   }
 
   function nodoDe(o, sinSel) {
-    var c = colorDe(o), g = o.grosor || 6;
+    var c = colorDe(o), g = o.grosor || 7;
     var wrap = ns('g', { 'data-id': o.id, class: 'ob' + (!sinSel && sel === o ? ' sel' : '') });
     if (o.tipo === 'pen') {
       wrap.appendChild(ns('polyline', { points: o.pts.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: c, 'stroke-width': g, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
@@ -438,11 +584,10 @@ U.sketch = (function () {
       var ang = Math.atan2(o.y2 - o.y, o.x2 - o.x), L = g * 3.2;
       wrap.appendChild(ns('line', { x1: o.x, y1: o.y, x2: o.x2, y2: o.y2, stroke: c, 'stroke-width': g, 'stroke-linecap': 'round' }));
       wrap.appendChild(ns('polygon', {
-        points: [
-          [o.x2, o.y2],
-          [o.x2 - L * Math.cos(ang - 0.45), o.y2 - L * Math.sin(ang - 0.45)],
-          [o.x2 - L * Math.cos(ang + 0.45), o.y2 - L * Math.sin(ang + 0.45)]
-        ].map(function (p) { return p.join(','); }).join(' '), fill: c
+        points: [[o.x2, o.y2],
+        [o.x2 - L * Math.cos(ang - 0.45), o.y2 - L * Math.sin(ang - 0.45)],
+        [o.x2 - L * Math.cos(ang + 0.45), o.y2 - L * Math.sin(ang + 0.45)]]
+          .map(function (p) { return p.join(','); }).join(' '), fill: c
       }));
     } else if (o.tipo === 'rect') {
       wrap.appendChild(ns('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
@@ -472,12 +617,10 @@ U.sketch = (function () {
       gp.appendChild(ns('rect', { x: -W / 2, y: -H - 18 * kk, width: W, height: H, fill: '#0b0a06', stroke: c, 'stroke-width': 4 * kk, rx: 3 }));
       var im = ns('image', { x: -W / 2 + 3 * kk, y: -H - 15 * kk, width: W - 6 * kk, height: H - 6 * kk, preserveAspectRatio: 'xMidYMid slice' });
       var url = shotsCache[o.shotId];
-      if (url) { im.setAttribute('href', url); }
-      else {
-        U.shots.get(o.shotId).then(function (u) {
-          if (u) { shotsCache[o.shotId] = u; im.setAttribute('href', u); }
-        });
-      }
+      if (url) im.setAttribute('href', url);
+      else U.shots.get(o.shotId).then(function (u) {
+        if (u) { shotsCache[o.shotId] = u; im.setAttribute('href', u); }
+      });
       gp.appendChild(im);
       if (o.etiqueta) {
         var tl = ns('text', { x: 0, y: 24 * kk, fill: c, 'font-size': 20 * kk, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace', stroke: '#0b0a06', 'stroke-width': 4 * kk, 'paint-order': 'stroke' });
@@ -493,8 +636,11 @@ U.sketch = (function () {
 
   function abrirPin(o) {
     var mostrar = function (u) { U.verCaptura(u, o.etiqueta || 'Captura del terreno'); };
-    if (shotsCache[o.shotId]) mostrar(shotsCache[o.shotId]);
-    else U.shots.get(o.shotId).then(function (u) { if (u) { shotsCache[o.shotId] = u; mostrar(u); } else U.toast('La captura no está en este navegador', 'err'); });
+    if (shotsCache[o.shotId]) return mostrar(shotsCache[o.shotId]);
+    U.shots.get(o.shotId).then(function (u) {
+      if (u) { shotsCache[o.shotId] = u; mostrar(u); }
+      else U.toast('La captura no está disponible', 'err');
+    });
   }
 
   function marco(o) {
@@ -518,7 +664,7 @@ U.sketch = (function () {
     return { x: o.x - s, y: o.y - s, w: s * 2, h: s * 2 };
   }
 
-  /* ---------------- leyenda (la parte que conecta con el roster) ---------------- */
+  /* ---------------- leyenda ---------------- */
   var verTodos = false;
   function pintarLeyenda() {
     U.vaciar(leyenda);
@@ -534,49 +680,47 @@ U.sketch = (function () {
     ]));
 
     var grupos = U.ROSTER.filter(function (g) {
-      if (verTodos) return U.plantel(g.id).length;
-      return usados[g.id];
+      return verTodos ? U.plantel(g.id).length : usados[g.id];
     });
-
     if (!grupos.length) {
-      leyenda.appendChild(U.el('p', { class: 'ley-vacio', text: 'Dibujá con el color de un grupo y acá aparecen sus jugadores. Cargá primero el roster.' }));
+      leyenda.appendChild(U.el('p', { class: 'ley-vacio', text: 'Dibujá con el color de un grupo y acá aparecen sus jugadores.' }));
     }
 
     grupos.forEach(function (g) {
       var u = U.unit(g.unidad), pl = U.plantel(g.id);
       var caja = U.el('div', { class: 'ley-grupo' + (grupoActivo === g.id ? ' on' : ''), style: { '--c': u.color } });
       caja.appendChild(U.el('div', {
-        class: 'ley-t', onclick: function () { grupoActivo = g.id; pintarTools(); pintarLeyenda(); resaltar(g.id); },
-        html: '<i></i><span>' + g.titulo.replace(/ ·.*/, '') + '</span><b>' + (usados[g.id] || 0) + ' marcas</b>'
+        class: 'ley-t',
+        onclick: function () { grupoActivo = g.id; pintarTools(); pintarLeyenda(); resaltar(g.id); },
+        html: '<i></i><span>' + corto(g) + '</span><b>' + (usados[g.id] || 0) + '</b>'
       }));
       var ul = U.el('div', { class: 'ley-jug' });
-      if (!pl.length) ul.appendChild(U.el('span', { class: 'vacio', text: 'sin jugadores cargados' }));
+      if (!pl.length) ul.appendChild(U.el('span', { class: 'vacio', text: 'sin jugadores' }));
       pl.forEach(function (j) {
         ul.appendChild(U.el('span', {
-          class: 'j' + (/SL|COMMANDER|CAP/.test(j.rol) ? ' lider' : '') + (j.ok ? ' ok' : ''),
-          title: j.rol,
-          html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre
+          class: 'j' + (/SL|COMMANDER|CAP/.test(j.rol) ? ' lider' : '') + (j.est === 'ok' ? ' ok' : j.est === 'falta' ? ' falta' : ''),
+          title: j.rol, html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre
         }));
       });
       caja.appendChild(ul);
       leyenda.appendChild(caja);
     });
 
-    /* pins de la slide, listados aparte */
     var pins = objs().filter(function (o) { return o.tipo === 'pin'; });
     if (pins.length) {
-      leyenda.appendChild(U.el('div', { class: 'ley-head' }, [U.el('h3', { text: 'Capturas pineadas' })]));
+      leyenda.appendChild(U.el('div', { class: 'ley-head' }, [U.el('h3', { text: 'Capturas' })]));
       var cont = U.el('div', { class: 'ley-pins' });
       pins.forEach(function (o, i) {
-        var b = U.el('button', { class: 'ley-pin', text: (i + 1) + ' · ' + (o.etiqueta || 'sin etiqueta'), onclick: function () { abrirPin(o); } });
-        cont.appendChild(b);
+        cont.appendChild(U.el('button', {
+          class: 'ley-pin', text: (i + 1) + ' · ' + (o.etiqueta || 'sin etiqueta'),
+          onclick: function () { abrirPin(o); }
+        }));
       });
       leyenda.appendChild(cont);
     }
   }
 
   function resaltar(gid) {
-    U.$$('.ob', svg).forEach(function (n) { n.classList.remove('flash'); });
     objs().forEach(function (o) {
       if (o.grupo !== gid) return;
       var n = svg.querySelector('[data-id="' + o.id + '"]');
@@ -589,7 +733,7 @@ U.sketch = (function () {
     U.vaciar(slidesBar);
     var s = strat();
     s.slides.forEach(function (sl, i) {
-      var b = U.el('button', {
+      slidesBar.appendChild(U.el('button', {
         class: 'sk-slide' + (i === s.activa ? ' on' : ''),
         onclick: function () { s.activa = i; sel = null; U.save(); render(); },
         ondblclick: function () {
@@ -600,18 +744,17 @@ U.sketch = (function () {
         U.el('span', { class: 'n', text: (i + 1) }),
         U.el('span', { class: 'nm', text: sl.nombre }),
         U.el('span', { class: 'c', text: sl.objs.length })
-      ]);
-      slidesBar.appendChild(b);
+      ]));
     });
     slidesBar.appendChild(U.el('button', {
-      class: 'sk-slide add', text: '＋ slide',
+      class: 'sk-slide add', text: '＋',  title: 'Nueva slide',
       onclick: function () {
         s.slides.push({ id: U.uid('s'), nombre: 'Slide ' + (s.slides.length + 1), objs: [] });
         s.activa = s.slides.length - 1; U.save(); render();
       }
     }));
     slidesBar.appendChild(U.el('button', {
-      class: 'sk-slide add', text: '⧉ duplicar',
+      class: 'sk-slide add', text: '⧉', title: 'Duplicar slide',
       onclick: function () {
         var c = JSON.parse(JSON.stringify(slide()));
         c.id = U.uid('s'); c.nombre = c.nombre + ' (copia)';
@@ -620,7 +763,7 @@ U.sketch = (function () {
       }
     }));
     if (s.slides.length > 1) slidesBar.appendChild(U.el('button', {
-      class: 'sk-slide add del', text: '✕ borrar',
+      class: 'sk-slide add del', text: '✕', title: 'Borrar slide',
       onclick: function () {
         U.confirmar('¿Borrar la slide "' + slide().nombre + '"?', function () {
           s.slides.splice(s.activa, 1); s.activa = Math.max(0, s.activa - 1); U.save(); render();
@@ -642,9 +785,7 @@ U.sketch = (function () {
     function pintar() {
       var sl = s.slides[i];
       U.vaciar(vista); U.vaciar(ley); U.vaciar(barra);
-      var clon = svg.cloneNode(false);
-      clon.setAttribute('viewBox', '0 0 ' + NAT.w + ' ' + NAT.h);
-      clon.setAttribute('class', 'sk-svg');
+      var clon = ns('svg', { class: 'sk-svg', viewBox: '0 0 ' + NAT.w + ' ' + NAT.h });
       clon.appendChild(gMapa.cloneNode(true));
       var go = ns('g');
       sl.objs.forEach(function (o) { go.appendChild(nodoDe(o, true)); });
@@ -652,33 +793,38 @@ U.sketch = (function () {
       vista.appendChild(clon);
 
       var p = U.partida();
-      barra.appendChild(U.el('div', { class: 'p-tit', html: '<b>' + esc(p.nombre) + '</b> · ' + esc(U.map(s.mapa).nombre) + (p.punto ? ' · ' + esc(p.punto) : '') + ' · <span>' + esc(sl.nombre) + '</span>' }));
-      var nav = U.el('div', { class: 'p-nav' }, [
+      barra.appendChild(U.el('div', {
+        class: 'p-tit',
+        html: '<b>' + esc(p.nombre) + '</b> · ' + esc(U.map(s.mapa).nombre) + (p.punto ? ' · ' + esc(p.punto) : '') + ' · <span>' + esc(sl.nombre) + '</span>'
+      }));
+      barra.appendChild(U.el('div', { class: 'p-nav' }, [
         U.el('button', { class: 'btn sm', text: '‹', onclick: function () { i = (i - 1 + s.slides.length) % s.slides.length; pintar(); } }),
         U.el('span', { text: (i + 1) + ' / ' + s.slides.length }),
         U.el('button', { class: 'btn sm', text: '›', onclick: function () { i = (i + 1) % s.slides.length; pintar(); } }),
         U.el('button', { class: 'btn sm ghost', text: 'Salir (Esc)', onclick: salir })
-      ]);
-      barra.appendChild(nav);
+      ]));
 
       var usados = {};
       sl.objs.forEach(function (o) { if (o.grupo) usados[o.grupo] = true; });
       U.ROSTER.filter(function (g) { return usados[g.id]; }).forEach(function (g) {
         var u = U.unit(g.unidad), pl = U.plantel(g.id);
         var c = U.el('div', { class: 'p-grupo', style: { '--c': u.color } });
-        c.appendChild(U.el('h4', { html: '<i></i>' + g.titulo.replace(/ ·.*/, '') }));
+        c.appendChild(U.el('h4', { html: '<i></i>' + corto(g) }));
         var l = U.el('div', { class: 'p-jug' });
-        pl.forEach(function (j) { l.appendChild(U.el('span', { class: /SL|COMMANDER|CAP/.test(j.rol) ? 'lider' : '', html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre })); });
+        pl.forEach(function (j) {
+          l.appendChild(U.el('span', { class: /SL|COMMANDER|CAP/.test(j.rol) ? 'lider' : '', html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre }));
+        });
         if (!pl.length) l.appendChild(U.el('span', { class: 'vacio', text: '—' }));
-        c.appendChild(l);
-        ley.appendChild(c);
+        c.appendChild(l); ley.appendChild(c);
       });
       var pins = sl.objs.filter(function (o) { return o.tipo === 'pin'; });
       if (pins.length) {
         var pc = U.el('div', { class: 'p-grupo', style: { '--c': '#c99a2e' } });
         pc.appendChild(U.el('h4', { html: '<i></i>CAPTURAS' }));
         var pl2 = U.el('div', { class: 'p-jug' });
-        pins.forEach(function (o, n) { pl2.appendChild(U.el('span', { html: '<i>📷</i>' + (o.etiqueta || ('pin ' + (n + 1))), onclick: function () { abrirPin(o); } })); });
+        pins.forEach(function (o, n) {
+          pl2.appendChild(U.el('span', { html: '<i>▣</i>' + (o.etiqueta || ('pin ' + (n + 1))), onclick: function () { abrirPin(o); } }));
+        });
         pc.appendChild(pl2); ley.appendChild(pc);
       }
     }
@@ -692,7 +838,7 @@ U.sketch = (function () {
     pintar();
   }
 
-  /* ---------------- íconos tácticos (SVG puro) ---------------- */
+  /* ---------------- íconos tácticos ---------------- */
   function iconSVG(id, c) {
     var s = '#0b0a06';
     var base = function (inner) { return '<g stroke-linejoin="round" stroke-linecap="round">' + inner + '</g>'; };
@@ -721,7 +867,12 @@ U.sketch = (function () {
 
   return {
     montar: montar,
-    render: function () { if (svg) { render(); } },
-    recargarMapa: function () { if (svg) { cargarMapa(); pintarTools(); render(); } }
+    render: function () { if (svg) render(); },
+    recargarMapa: function () {
+      if (!svg) return;
+      historia = {}; futuro = {}; sel = null;
+      if (!hay()) { vacio(); return; }
+      cargarMapa(); pintarTools(); render();
+    }
   };
 })();
