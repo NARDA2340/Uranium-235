@@ -2,6 +2,9 @@
 [build]
   publish = "."
   functions = "netlify/functions"
+  # sitio estático: no hay que compilar nada, solo instalar la dependencia
+  # de la función (@netlify/blobs) y publicar los archivos tal cual
+  command = "echo 'sin build'"
 
 [functions]
   node_bundler = "esbuild"
