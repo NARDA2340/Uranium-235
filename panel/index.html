@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>URANIUM 235 — Panel de operaciones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Space+Mono:wght@400;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../style.css">
+<link rel="stylesheet" href="panel.css">
+</head>
+
+<body class="panel">
+
+<header id="topbar"></header>
+
+<main id="vistas">
+  <section class="vista" id="v-dashboard"></section>
+
+  <section class="vista" id="v-roster">
+    <div class="roster-wrap">
+      <div id="roster-grid"></div>
+      <aside id="roster-side"></aside>
+    </div>
+  </section>
+
+  <section class="vista" id="v-strat"></section>
+</main>
+
+<div id="toasts"></div>
+
+<script src="members.seed.js"></script>
+<script src="data.js"></script>
+<script src="store.js"></script>
+<script src="ui.js"></script>
+<script src="dashboard.js"></script>
+<script src="roster.js"></script>
+<script src="sketch.js"></script>
+<script src="main.js"></script>
+</body>
+</html>
