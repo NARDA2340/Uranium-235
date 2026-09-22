@@ -536,3 +536,12 @@ textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:v
 
 .sk-slide.add{min-width:34px;justify-content:center}
 .ley-jug .j.falta{color:#a8776c;text-decoration:line-through;text-decoration-color:rgba(176,67,47,.5)}
+
+/* soltar una imagen sobre el mapa */
+.sk-marco.drop{box-shadow:0 0 0 3px var(--amber),0 0 40px rgba(201,154,46,.35)}
+.sk-marco.drop::after{
+  content:"Soltá la captura acá";position:absolute;inset:auto 0 12px;text-align:center;
+  font-family:var(--f-mono);font-size:12px;color:var(--amber-hi);pointer-events:none;
+}
+.sk-marco{position:relative}
+.ley-head .chip{margin-left:auto}

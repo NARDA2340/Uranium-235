@@ -286,12 +286,17 @@ U.shots = (function () {
     put: function (id, dataUrl) {
       U.db.guardarCaptura(id, dataUrl);   // que la vean los demás
       return db().then(function (d) {
-        return new Promise(function (res, rej) {
+        return new Promise(function (res) {
           var tx = d.transaction('shots', 'readwrite');
           tx.objectStore('shots').put(dataUrl, id);
           tx.oncomplete = function () { res(id); };
-          tx.onerror = function () { rej(tx.error); };
+          tx.onerror = function () { console.warn('IndexedDB rechazó la captura', tx.error); res(id); };
         });
+      }).catch(function (e) {
+        // modo incógnito o almacenamiento bloqueado: la captura vive en
+        // memoria y en la nube, el pin se crea igual
+        console.warn('sin IndexedDB, la captura no queda cacheada acá', e);
+        return id;
       });
     },
     get: function (id) {
@@ -302,7 +307,7 @@ U.shots = (function () {
           q.onsuccess = function () { res(q.result || null); };
           q.onerror = function () { rej(q.error); };
         });
-      }).then(function (local) {
+      }).catch(function () { return null; }).then(function (local) {
         if (local) return local;
         // no está en este navegador: la pedimos a la base y la cacheamos
         return U.db.leerCaptura(id).then(function (remota) {
@@ -345,14 +350,20 @@ U.optimizarImagen = function (file, max) {
     fr.onload = function () {
       var img = new Image();
       img.onload = function () {
-        var w = img.width, h = img.height;
-        if (w > max) { h = Math.round(h * max / w); w = max; }
-        var c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        c.getContext('2d').drawImage(img, 0, 0, w, h);
-        res({ url: c.toDataURL('image/jpeg', 0.78), w: w, h: h });
+        try {
+          var w = img.width, h = img.height;
+          if (w > max) { h = Math.round(h * max / w); w = max; }
+          var c = document.createElement('canvas');
+          c.width = w; c.height = h;
+          c.getContext('2d').drawImage(img, 0, 0, w, h);
+          res({ url: c.toDataURL('image/jpeg', 0.78), w: w, h: h });
+        } catch (e) {
+          // canvas "sucio" o sin memoria: la usamos tal cual vino
+          console.warn('no se pudo reescalar la captura, se guarda original', e);
+          res({ url: fr.result, w: img.width, h: img.height });
+        }
       };
-      img.onerror = rej;
+      img.onerror = function () { res({ url: fr.result, w: 0, h: 0 }); };
       img.src = fr.result;
     };
     fr.onerror = rej;

@@ -273,6 +273,11 @@ U.sketch = (function () {
 
     /* --- acciones finales --- */
     var fin = U.el('div', { class: 'sk-grp col' });
+    fin.appendChild(U.el('button', {
+      class: 'btn sm', text: '＋ Captura',
+      title: 'Subir una foto y pinearla en el mapa (también podés arrastrarla o pegarla con Ctrl+V)',
+      onclick: pedirCaptura
+    }));
     fin.appendChild(U.el('button', { class: 'btn sm primary', text: '▶ Presentar', onclick: presentar }));
     fin.appendChild(U.el('button', {
       class: 'btn sm ghost', text: 'Limpiar slide', onclick: function () {
@@ -403,11 +408,29 @@ U.sketch = (function () {
       if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); cerrarPop(); render(); }
     });
 
+    /* soltar una imagen encima del mapa la pinea donde la soltaste */
+    ['dragenter', 'dragover'].forEach(function (ev) {
+      svg.addEventListener(ev, function (e) {
+        if (!hay()) return;
+        e.preventDefault();
+        marcoMapa.classList.add('drop');
+      });
+    });
+    ['dragleave', 'dragend'].forEach(function (ev) {
+      svg.addEventListener(ev, function () { marcoMapa.classList.remove('drop'); });
+    });
+    svg.addEventListener('drop', function (e) {
+      e.preventDefault();
+      marcoMapa.classList.remove('drop');
+      var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (f) agregarCaptura(f, svgPt(e));
+    });
+
     document.addEventListener('paste', function (e) {
       if (!host || host.offsetParent === null) return;
       var it = Array.prototype.slice.call(e.clipboardData.items).find(function (i) { return i.type.indexOf('image') === 0; });
       if (!it) return;
-      crearPin(it.getAsFile(), { x: NAT.w / 2, y: NAT.h / 2 });
+      agregarCaptura(it.getAsFile(), { x: NAT.w / 2, y: NAT.h / 2 });
     });
   }
 
@@ -444,14 +467,13 @@ U.sketch = (function () {
     }
     if (tool === 'icon') { nuevo({ tipo: 'icon', icono: iconoActivo, x: p.x, y: p.y, escala: escalaIcono }); return; }
     if (tool === 'text') {
-      var t = prompt('Texto:');
-      if (t) nuevo({ tipo: 'text', texto: t, x: p.x, y: p.y, size: Math.round(40 * escalaIcono) });
+      U.pedirTexto('Texto en el mapa', '', function (t) {
+        if (t) { nuevo({ tipo: 'text', texto: t, x: p.x, y: p.y, size: Math.round(40 * escalaIcono) }); }
+      }, { ph: 'ej: TRÁFICO — marcar' });
       return;
     }
     if (tool === 'pin') {
-      var inp = U.el('input', { type: 'file', accept: 'image/*' });
-      inp.addEventListener('change', function () { if (inp.files[0]) crearPin(inp.files[0], p); });
-      inp.click();
+      U.elegirArchivo('image/*', function (f) { agregarCaptura(f, p); });
       return;
     }
   }
@@ -533,16 +555,40 @@ U.sketch = (function () {
     sel = null; U.save(); render();
   }
 
-  function crearPin(file, p) {
+  /* Agrega una captura al mapa. El pin se crea apenas tenemos la imagen;
+     guardarla en IndexedDB o en la nube es aparte y no puede frenar nada. */
+  function agregarCaptura(file, p) {
+    if (!file) return;
+    if (!/^image\//.test(file.type || '')) { U.toast('Eso no es una imagen', 'err'); return; }
+    if (!hay()) { U.toast('Elegí una partida primero', 'err'); return; }
+    U.toast('Procesando la captura…');
+
     U.optimizarImagen(file, 1600).then(function (r) {
       var id = U.uid('shot');
-      shotsCache[id] = r.url;
-      return U.shots.put(id, r.url).then(function () {
-        var et = prompt('Etiqueta del pin (ej: "vista desde el granero"):', '') || '';
-        nuevo({ tipo: 'pin', x: p.x, y: p.y, shotId: id, etiqueta: et });
-        tool = 'sel'; pintarTools();
+      shotsCache[id] = r.url;                    // ya se puede dibujar
+      nuevo({ tipo: 'pin', x: p.x, y: p.y, shotId: id, etiqueta: '' });
+      tool = 'sel'; pintarTools(); render();
+      U.shots.put(id, r.url);                    // en segundo plano
+      var o = sel;
+      U.pedirTexto('Etiqueta del pin', '', function (t) {
+        if (t && o) { o.etiqueta = t; U.save(); render(); }
+      }, {
+        ph: 'ej: vista desde el granero',
+        ayuda: 'Opcional. Es lo que se lee abajo de la foto en el briefing.',
+        cancelar: 'Sin etiqueta'
       });
-    }).catch(function (e) { U.toast('No se pudo cargar la captura', 'err'); console.error(e); });
+    }).catch(function (e) {
+      console.error(e);
+      U.toast('No se pudo leer esa imagen', 'err');
+    });
+  }
+
+  /* botón directo: no hace falta acertarle al mapa, cae en el centro */
+  function pedirCaptura() {
+    if (!hay()) return;
+    U.elegirArchivo('image/*', function (f) {
+      agregarCaptura(f, { x: NAT.w / 2, y: NAT.h / 2 });
+    });
   }
 
   /* ---------------- dibujo ---------------- */
@@ -707,8 +753,13 @@ U.sketch = (function () {
     });
 
     var pins = objs().filter(function (o) { return o.tipo === 'pin'; });
-    if (pins.length) {
-      leyenda.appendChild(U.el('div', { class: 'ley-head' }, [U.el('h3', { text: 'Capturas' })]));
+    leyenda.appendChild(U.el('div', { class: 'ley-head' }, [
+      U.el('h3', { text: 'Capturas' }),
+      U.el('button', { class: 'chip', text: '＋ subir', title: 'Subir una foto al mapa', onclick: pedirCaptura })
+    ]));
+    if (!pins.length) {
+      leyenda.appendChild(U.el('p', { class: 'ley-vacio', text: 'Subí una foto, arrastrala sobre el mapa o pegala con Ctrl+V.' }));
+    } else {
       var cont = U.el('div', { class: 'ley-pins' });
       pins.forEach(function (o, i) {
         cont.appendChild(U.el('button', {
@@ -737,8 +788,9 @@ U.sketch = (function () {
         class: 'sk-slide' + (i === s.activa ? ' on' : ''),
         onclick: function () { s.activa = i; sel = null; U.save(); render(); },
         ondblclick: function () {
-          var n = prompt('Nombre de la slide:', sl.nombre);
-          if (n) { sl.nombre = n; U.save(); pintarSlides(); }
+          U.pedirTexto('Nombre de la slide', sl.nombre, function (n) {
+            if (n) { sl.nombre = n; U.save(); pintarSlides(); }
+          });
         }
       }, [
         U.el('span', { class: 'n', text: (i + 1) }),

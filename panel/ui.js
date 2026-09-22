@@ -153,3 +153,52 @@ U.verCaptura = function (dataUrl, titulo) {
   var img = U.el('img', { src: dataUrl, class: 'lb-img' });
   U.modal(titulo || 'Captura', img, { clase: 'lg' });
 };
+
+/* ---------- pedir un texto sin depender de prompt() ----------
+   prompt() lo bloquean los iframes con sandbox y algunos navegadores
+   cuando el usuario marca "no mostrar más diálogos". Este siempre anda. */
+U.pedirTexto = function (titulo, valor, ok, opts) {
+  opts = opts || {};
+  var inp = U.el('input', { class: 'inp', value: valor || '', placeholder: opts.ph || '', autocomplete: 'off' });
+  var cuerpo = U.el('div', { class: 'form' }, [
+    opts.ayuda ? U.el('p', { class: 'ayuda', text: opts.ayuda }) : null,
+    inp
+  ]);
+  var pie = U.el('div', { class: 'modal-pie' });
+  var m = U.modal(titulo, cuerpo, { pie: pie });
+  function aceptar() { m.cerrar(); ok(inp.value.trim()); }
+  inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); aceptar(); } });
+  pie.appendChild(U.el('button', {
+    class: 'btn', text: opts.cancelar || 'Cancelar',
+    onclick: function () { m.cerrar(); if (opts.alCancelar) opts.alCancelar(); }
+  }));
+  pie.appendChild(U.el('button', { class: 'btn primary', text: opts.boton || 'Guardar', onclick: aceptar }));
+  return m;
+};
+
+/* ---------- selector de archivos ----------
+   El input tiene que estar en el DOM: si está suelto, varios navegadores
+   ignoran el click() y no se abre nada. */
+U.elegirArchivo = function (accept, ok) {
+  var inp = U.el('input', {
+    type: 'file', accept: accept || 'image/*',
+    style: { position: 'fixed', left: '-9999px', top: '0', opacity: '0' }
+  });
+  document.body.appendChild(inp);
+  var listo = false;
+  inp.addEventListener('change', function () {
+    listo = true;
+    var f = inp.files && inp.files[0];
+    inp.remove();
+    if (f) ok(f);
+  });
+  // si cancela el diálogo no llega ningún evento: limpiamos al volver el foco
+  window.addEventListener('focus', function limpiar() {
+    setTimeout(function () {
+      if (!listo && inp.parentNode) inp.remove();
+      window.removeEventListener('focus', limpiar);
+    }, 800);
+  });
+  inp.click();
+  return inp;
+};
