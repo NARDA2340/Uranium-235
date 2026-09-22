@@ -29,7 +29,7 @@ U.nuevaPartida = function (nombre, formato) {
     notas: '',
     asignaciones: {},   // "grupo:indice" -> { m: idMiembro, ok: bool }
     extraSlots: {},     // "grupo" -> [rol, rol...]
-    reservas: [],       // ids de miembros en banco
+    convocados: [],     // ids de la votación de Discord: la pre-lista
     strat: {
       mapa: 'carentan',
       espacio: 1920,
@@ -115,7 +115,15 @@ U.migrar = function () {
     }
     if (!p.formato) p.formato = U.FORMATOS.indexOf(p.modo) >= 0 ? p.modo : 'x49';
     delete p.extraSlots;
-    if (!p.reservas) p.reservas = [];
+    // banco + roster pasaron a ser una sola lista: los convocados
+    if (!p.convocados) {
+      p.convocados = (p.reservas || []).slice();
+      Object.keys(p.asignaciones).forEach(function (k) {
+        var a = p.asignaciones[k];
+        if (a && a.m && p.convocados.indexOf(a.m) < 0) p.convocados.push(a.m);
+      });
+    }
+    delete p.reservas;
     // la asistencia pasó de booleano (vino sí/no) a tres estados
     Object.keys(p.asignaciones).forEach(function (k) {
       var a = p.asignaciones[k];
@@ -295,8 +303,11 @@ U.disponibles = function () {
     if (b.tipo === 'escuadra') enEscuadra[a.m] = true;
   });
   var orden = { 'Activo': 0, 'Tibio': 1, 'Inactivo': 2 };
+  var conv = p.convocados || [];
   return U.state.miembros.filter(function (m) {
     if (conTarea[m.id] || enEscuadra[m.id]) return false;
+    // si ya se cargó la votación, se rellena solo con los convocados
+    if (conv.length) return conv.indexOf(m.id) >= 0;
     return m.estado !== 'Inactivo';
   }).sort(function (a, b) { return (orden[a.estado] || 9) - (orden[b.estado] || 9); });
 };
@@ -394,9 +405,41 @@ U.asignar = function (gid, i, memberId) {
     // un jugador puede repetirse (tarea de apertura + escuadra), pero no
     // dos veces en el mismo bloque
     p.asignaciones[k] = { m: memberId, est: (p.asignaciones[k] || {}).est || '' };
+    if (p.convocados.indexOf(memberId) < 0) p.convocados.push(memberId);
   }
   U.save(); U.emit('roster');
 };
+/* ---------- convocados (la votación de Discord) ---------- */
+U.convocar = function (ids) {
+  var p = U.partida(); if (!p) return 0;
+  var n = 0;
+  ids.forEach(function (id) { if (p.convocados.indexOf(id) < 0) { p.convocados.push(id); n++; } });
+  U.save(); U.emit('roster');
+  return n;
+};
+/* sacarlo de la lista también lo saca del roster */
+U.desconvocar = function (id) {
+  var p = U.partida(); if (!p) return;
+  p.convocados = p.convocados.filter(function (x) { return x !== id; });
+  Object.keys(p.asignaciones).forEach(function (k) {
+    if (p.asignaciones[k] && p.asignaciones[k].m === id) delete p.asignaciones[k];
+  });
+  U.save(); U.emit('roster');
+};
+
+/* el resultado se carga recién desde las 00:00 del día siguiente */
+U.resultadoHabilitado = function (p) {
+  if (!p || !p.fecha) return true;
+  var f = String(p.fecha).split('-');
+  if (f.length !== 3) return true;
+  var diaSiguiente = new Date(+f[0], +f[1] - 1, +f[2] + 1, 0, 0, 0);
+  return Date.now() >= diaSiguiente.getTime();
+};
+U.fechaCorta = function (iso) {
+  var f = String(iso || '').split('-');
+  return f.length === 3 ? f[2] + '/' + f[1] : iso;
+};
+
 /* ciclo de asistencia: sin marcar -> vino -> faltó -> sin marcar */
 U.ciclarAsistencia = function (gid, i) {
   var p = U.partida(); if (!p) return;

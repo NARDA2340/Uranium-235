@@ -141,7 +141,6 @@ U.partidas = (function () {
       var m = U.MAPS.find(function (x) { return x.nombre === v; }); if (m) datos.mapa = m.id;
     }, { opciones: U.MAPS.map(function (m) { return m.nombre; }) }));
     f.appendChild(U.campo('Formato', datos.modo, function (v) { datos.modo = v; }, { opciones: U.FORMATOS }));
-    f.appendChild(U.el('p', { class: 'ayuda', text: 'x25 y x36 arrancan sin ariete ni incursor, con la defensa en su lugar. Después se edita todo a mano.' }));
     f.appendChild(U.campo('Bando', datos.bando, function (v) { datos.bando = v; }, { opciones: U.BANDOS }));
     var pie = U.el('div', { class: 'modal-pie' });
     var m = U.modal('Nueva partida', f, { pie: pie });

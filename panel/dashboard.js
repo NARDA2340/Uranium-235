@@ -47,14 +47,6 @@ U.dash = (function () {
     return m;
   }
 
-  function coberturaBloques() {
-    return U.bloques().map(function (g) {
-      var slots = U.slotsDe(g.id);
-      var ocup = slots.filter(function (_, i) { return U.asig(g.id, i); }).length;
-      return { g: g, ocup: ocup, total: slots.length, color: U.unit(g.unidad).color };
-    });
-  }
-
   /* ---------- render ---------- */
   function render() {
     if (!cont) return;
@@ -65,11 +57,33 @@ U.dash = (function () {
     var activos = U.state.miembros.filter(function (m) { return m.estado === 'Activo'; }).length;
     var conPartidas = U.state.partidas.filter(function (x) { return Object.keys(x.asignaciones).length; });
 
-    /* --- KPIs --- */
+    /* --- primero: la próxima partida --- */
+    var mapa = U.map(p.strat.mapa || p.mapa);
+    var ficha = U.el('div', { class: 'd-card ficha' });
+    ficha.appendChild(U.el('div', { class: 'd-card-head' }, [
+      U.el('h3', { text: 'Próxima partida' }),
+      U.el('span', { class: 'tag', text: p.fecha })
+    ]));
+    var fg = U.el('div', { class: 'ficha-grid' });
+    var res = p.resultado || (U.resultadoHabilitado(p) ? '—' : 'después del ' + U.fechaCorta(p.fecha));
+    [['Partida', p.nombre], ['Mapa', mapa.nombre], ['Punto', p.punto || '—'], ['Bando', p.bando],
+     ['Formato', p.formato || p.modo], ['Server', p.server.name || '—'], ['Pass', p.server.pass || '—'],
+     ['Briefing', p.briefing || '—'], ['Resultado', res]]
+      .forEach(function (r) {
+        fg.appendChild(U.el('div', { class: 'ficha-i' }, [U.el('span', { text: r[0] }), U.el('b', { text: r[1] })]));
+      });
+    ficha.appendChild(fg);
+    ficha.appendChild(U.el('div', { class: 'ficha-acc' }, [
+      U.el('button', { class: 'btn sm', text: 'Ir al roster →', onclick: function () { U.tab('roster'); } }),
+      U.el('button', { class: 'btn sm', text: 'Ir a la estrategia →', onclick: function () { U.tab('strat'); } })
+    ]));
+    cont.appendChild(ficha);
+
+    /* --- números del plantel --- */
     var kpis = U.el('div', { class: 'd-kpis' });
     [
       { k: 'Plantel', v: U.state.miembros.length, s: activos + ' activos' },
-      { k: 'Convocados', v: st.total, s: 'en ' + p.nombre },
+      { k: 'Convocados', v: (p.convocados || []).length, s: st.total + ' en el roster' },
       { k: 'Asistencia', v: (st.ok + st.falta) ? st.pct + '%' : '—', s: st.ok + ' vinieron de ' + (st.ok + st.falta) + ' marcados', tono: st.pct >= 85 ? 'ok' : st.pct >= 65 ? 'warn' : 'bad' },
       { k: 'Faltaron', v: st.falta, s: 'tildados a mano', tono: st.falta ? 'bad' : 'ok' },
       { k: 'Sin marcar', v: st.sinMarcar, s: 'falta pasar lista', tono: st.sinMarcar ? 'warn' : 'ok' },
@@ -83,64 +97,23 @@ U.dash = (function () {
     });
     cont.appendChild(kpis);
 
-    /* --- ficha de la partida --- */
-    var mapa = U.map(p.strat.mapa || p.mapa);
-    var ficha = U.el('div', { class: 'd-card ficha' });
-    ficha.appendChild(U.el('div', { class: 'd-card-head' }, [
-      U.el('h3', { text: 'Próxima partida' }),
-      U.el('span', { class: 'tag', text: p.fecha })
-    ]));
-    var fg = U.el('div', { class: 'ficha-grid' });
-    [['Partida', p.nombre], ['Mapa', mapa.nombre], ['Punto', p.punto || '—'], ['Bando', p.bando],
-     ['Formato', p.formato || p.modo], ['Server', p.server.name || '—'], ['Pass', p.server.pass || '—'],
-     ['Briefing', p.briefing || '—'], ['Resultado', p.resultado || '—']]
-      .forEach(function (r) {
-        fg.appendChild(U.el('div', { class: 'ficha-i' }, [U.el('span', { text: r[0] }), U.el('b', { text: r[1] })]));
-      });
-    ficha.appendChild(fg);
-    var acc = U.el('div', { class: 'ficha-acc' }, [
-      U.el('button', { class: 'btn sm', text: 'Ir al roster →', onclick: function () { U.tab('roster'); } }),
-      U.el('button', { class: 'btn sm', text: 'Ir a la estrategia →', onclick: function () { U.tab('strat'); } })
-    ]);
-    ficha.appendChild(acc);
-    cont.appendChild(ficha);
-
-    /* --- grilla de gráficos --- */
-    var grid = U.el('div', { class: 'd-grid' });
-    grid.appendChild(cardCobertura());
+    /* --- las tres métricas, una al lado de la otra --- */
+    var grid = U.el('div', { class: 'd-grid tres' });
     grid.appendChild(cardAsistencia());
     grid.appendChild(cardEstados());
     grid.appendChild(cardTop());
     cont.appendChild(grid);
 
-    cont.appendChild(cardPartidas());
     cont.appendChild(cardPlantel());
-  }
-
-  /* --- cobertura del roster (barras horizontales, una serie) --- */
-  function cardCobertura() {
-    var c = card('Cobertura del roster', 'Slots ocupados por bloque en la partida activa');
-    var body = U.el('div', { class: 'bars' });
-    coberturaBloques().forEach(function (b) {
-      var pct = b.total ? b.ocup / b.total * 100 : 0;
-      var row = U.el('div', { class: 'bar-row', title: b.g.titulo + ': ' + b.ocup + ' de ' + b.total });
-      row.appendChild(U.el('span', { class: 'lb', text: b.g.titulo.replace(/ ·.*/, '') }));
-      var track = U.el('div', { class: 'track' });
-      track.appendChild(U.el('div', { class: 'fill', style: { width: pct + '%', background: b.color } }));
-      row.appendChild(track);
-      row.appendChild(U.el('span', { class: 'vl' + (b.ocup === b.total ? ' full' : b.ocup === 0 ? ' zero' : ''), text: b.ocup + '/' + b.total }));
-      body.appendChild(row);
-    });
-    c.appendChild(body);
-    return c;
+    cont.appendChild(cardPartidas());
   }
 
   /* --- asistencia por partida (columnas) --- */
   function cardAsistencia() {
-    var c = card('Asistencia por partida', '% de los marcados que aparecieron');
+    var c = card('Asistencia por partida');
     var ps = U.state.partidas.filter(function (x) { return Object.keys(x.asignaciones).length; }).slice(-10);
     if (!ps.length) { c.appendChild(vacio('Todavía no hay partidas con roster cargado.')); return c; }
-    var W = 560, H = 190, padL = 34, padB = 42, padT = 14;
+    var W = 420, H = 230, padL = 34, padB = 42, padT = 16;
     var bw = Math.min((W - padL - 10) / ps.length, 78);
     var svg = svgEl(W, H);
     [0, 50, 100].forEach(function (g) {
@@ -174,7 +147,7 @@ U.dash = (function () {
   function tono(e) { return U.ESTADO_COLOR[e] || '#5a4d2a'; }
 
   function cardEstados() {
-    var c = card('Estado del plantel', 'Clic en cualquier estado para cambiarlo');
+    var c = card('Estado del plantel');
     var cuenta = {};
     U.state.miembros.forEach(function (m) { cuenta[m.estado] = (cuenta[m.estado] || 0) + 1; });
     var total = U.state.miembros.length || 1;
@@ -196,7 +169,6 @@ U.dash = (function () {
       }));
     });
     c.appendChild(leg);
-    c.appendChild(U.el('p', { class: 'ayuda', text: 'Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más o no aparece nunca.' }));
 
     var porUnidad = {};
     U.state.miembros.forEach(function (m) { porUnidad[m.unidad] = (porUnidad[m.unidad] || 0) + 1; });
@@ -214,36 +186,38 @@ U.dash = (function () {
     return c;
   }
 
-  /* --- ranking de asistencia --- */
+  /* --- ranking de asistencia: los 10 que más vienen y los 10 que menos --- */
   function cardTop() {
-    var c = card('Asistencia acumulada', 'Sobre todas las partidas cargadas');
+    var c = card('Asistencia');
     var m = asistenciaPorJugador();
-    var arr = Object.keys(m).map(function (id) {
-      return {
-        id: id, nombre: U.nombreMiembro(id), conv: m[id].conv, ok: m[id].ok, falta: m[id].falta,
-        pct: Math.round(m[id].ok / m[id].conv * 100)
-      };
-    }).sort(function (a, b) { return b.ok - a.ok || b.pct - a.pct; }).slice(0, 12);
-    if (!arr.length) { c.appendChild(vacio('Cargá el roster y marcá quién vino.')); return c; }
-    var max = arr[0].conv || 1;
-    var body = U.el('div', { class: 'bars' });
-    arr.forEach(function (j) {
-      var row = U.el('div', { class: 'bar-row', title: j.nombre + ': vino ' + j.ok + ' de ' + j.conv + ' · faltó ' + j.falta });
-      row.appendChild(U.el('span', { class: 'lb', text: j.nombre }));
-      var track = U.el('div', { class: 'track' });
-      track.appendChild(U.el('div', { class: 'fill', style: { width: (j.ok / max * 100) + '%', background: '#c99a2e' } }));
-      track.appendChild(U.el('div', { class: 'ghost', style: { width: (j.conv / max * 100) + '%' } }));
-      row.appendChild(track);
-      row.appendChild(U.el('span', { class: 'vl', text: j.ok + '/' + j.conv }));
-      body.appendChild(row);
+    var arr = Object.keys(m).filter(function (id) { return U.miembro(id) && (m[id].ok + m[id].falta); }).map(function (id) {
+      var marc = m[id].ok + m[id].falta;
+      return { nombre: U.nombreMiembro(id), ok: m[id].ok, falta: m[id].falta, marc: marc, pct: Math.round(m[id].ok / marc * 100) };
     });
-    c.appendChild(body);
+    if (!arr.length) { c.appendChild(vacio('Cargá el roster y marcá quién vino.')); return c; }
+    var mas = arr.slice().sort(function (a, b) { return b.ok - a.ok || b.pct - a.pct; }).slice(0, 10);
+    var menos = arr.slice().sort(function (a, b) { return a.pct - b.pct || b.falta - a.falta; }).slice(0, 10);
+    var cols = U.el('div', { class: 'top2' });
+    [['Top 10 · más', mas, 'mas'], ['Top 10 · menos', menos, 'menos']].forEach(function (t) {
+      var col = U.el('div', { class: 'top-col ' + t[2] }, [U.el('h4', { text: t[0] })]);
+      var ol = U.el('ol');
+      t[1].forEach(function (j) {
+        ol.appendChild(U.el('li', { title: j.nombre + ': vino ' + j.ok + ' · faltó ' + j.falta }, [
+          U.el('span', { class: 'nm', text: j.nombre }),
+          U.el('span', { class: 'vl', text: j.pct + '%' }),
+          U.el('span', { class: 'bar', style: { width: j.pct + '%' } })
+        ]));
+      });
+      col.appendChild(ol);
+      cols.appendChild(col);
+    });
+    c.appendChild(cols);
     return c;
   }
 
   /* --- tabla de partidas --- */
   function cardPartidas() {
-    var c = card('Partidas', 'Historial cargado en el panel');
+    var c = card('Partidas');
     var t = U.el('table', { class: 'tabla' });
     t.appendChild(U.el('thead', {}, [U.el('tr', {}, ['Partida', 'Fecha', 'Mapa', 'Punto', 'Modo', 'Convocados', 'Vinieron', 'Faltaron', 'Resultado', ''].map(function (h) { return U.el('th', { text: h }); }))]));
     var tb = U.el('tbody');
@@ -264,7 +238,7 @@ U.dash = (function () {
 
   /* --- tabla del plantel: alta rápida y semáforo de un clic --- */
   function cardPlantel() {
-    var c = card('Base de jugadores', U.state.miembros.length + ' cargados');
+    var c = card('Base de jugadores', U.state.miembros.length + ' jugadores');
 
     var acciones = U.el('div', { class: 'plantel-acc' }, [
       U.el('button', { class: 'btn primary', text: '＋ Agregar jugador', onclick: function () { U.emit('nuevoMiembro'); } }),

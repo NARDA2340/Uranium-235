@@ -198,7 +198,6 @@ U.roster = (function () {
       var id = (arrastrando && arrastrando.m) || e.dataTransfer.getData('text/plain');
       if (!id || id.indexOf('bloque:') === 0) return;
       if (arrastrando && arrastrando.from) U.asignar(arrastrando.from[0], arrastrando.from[1], null);
-      quitarReserva(id);
       U.asignar(g.id, i, id);
       arrastrando = null; render();
     });
@@ -220,14 +219,24 @@ U.roster = (function () {
   /* ---------------- pie ---------------- */
   function pie(p) {
     var box = U.el('div', { class: 'r-pie solo-resultado' });
-    box.appendChild(U.campo('Resultado', p.resultado, function (v) {
-      p.resultado = v; U.save(); U.emit('dash'); U.emit('partidas');
-    }, { ph: 'ej: 5-0 / 3-2 W' }));
+    if (U.resultadoHabilitado(p)) {
+      box.appendChild(U.campo('Resultado', p.resultado, function (v) {
+        p.resultado = v; U.save(); U.emit('dash'); U.emit('partidas');
+      }, { ph: 'ej: 5-0 / 3-2 W' }));
+    } else {
+      box.appendChild(U.el('div', { class: 'campo bloqueado' }, [
+        U.el('span', { text: 'Resultado' }),
+        U.el('div', { class: 'inp off', text: 'Se carga después del ' + U.fechaCorta(p.fecha) })
+      ]));
+    }
     return box;
   }
 
-  /* ================= sidebar ================= */
-  var filtro = { q: '', unidad: 'Todos', soloLibres: false };
+  /* ================= sidebar =================
+     Una sola lista: los convocados de la votación de Discord.
+     Se pegan, quedan como pre-lista y de ahí se arrastran al roster.
+     Los que no tienen puesto son el banco. */
+  var filtro = { q: '', vista: 'conv', unidad: 'Todos' };
 
   function pintarSidebar() {
     if (!side) return;
@@ -235,10 +244,9 @@ U.roster = (function () {
     var p = U.partida();
     if (!p) return;
 
-    /* --- contadores, ahora acá --- */
     var c = U.contadores();
     var cont4 = U.el('div', { class: 'sb-cont' });
-    [['Convocados', c.total, ''], ['Vinieron', c.asistieron, 'ok'],
+    [['Convocados', p.convocados.length, ''], ['Vinieron', c.asistieron, 'ok'],
      ['Faltaron', c.faltaron, c.faltaron ? 'bad' : ''], ['Sin marcar', c.sinMarcar, c.sinMarcar ? 'warn' : '']]
       .forEach(function (r) {
         cont4.appendChild(U.el('div', { class: 'sb-num ' + r[2] }, [
@@ -246,65 +254,57 @@ U.roster = (function () {
         ]));
       });
     side.appendChild(cont4);
-    side.appendChild(U.el('p', { class: 'ayuda', text: 'Clic en una fila del roster para pasar lista: vino → faltó → sin marcar.' }));
 
-    var head = U.el('div', { class: 'sb-head' }, [
-      U.el('h3', { text: 'Jugadores' }),
-      U.el('span', { class: 'n', text: U.state.miembros.length })
-    ]);
-    side.appendChild(head);
+    side.appendChild(U.el('button', {
+      class: 'btn primary sb-votacion', text: '⇪ Pegar votación de Discord', onclick: pegarVotacion
+    }));
+
+    var tabs = U.el('div', { class: 'sb-tabs' });
+    [['conv', 'Convocados', p.convocados.length], ['base', 'Toda la base', U.state.miembros.length]].forEach(function (t) {
+      tabs.appendChild(U.el('button', {
+        class: 'sb-tab' + (filtro.vista === t[0] ? ' on' : ''),
+        html: t[1] + ' <b>' + t[2] + '</b>',
+        onclick: function () { filtro.vista = t[0]; pintarSidebar(); }
+      }));
+    });
+    side.appendChild(tabs);
 
     var fila = U.el('div', { class: 'sb-buscar' });
     var buscar = U.el('input', { class: 'inp', placeholder: 'Buscar…', value: filtro.q });
     buscar.addEventListener('input', function () { filtro.q = buscar.value; pintarLista(); });
     fila.appendChild(buscar);
-
-    var sel = U.el('select', { class: 'inp filtro', title: 'Filtrar la base de jugadores' });
-    ['Todos'].concat(U.UNIDADES_MIEMBRO).concat(['— Sin asignar —']).forEach(function (u) {
-      var valor = u === '— Sin asignar —' ? '__libres' : u;
-      var puesto = filtro.soloLibres ? '__libres' : filtro.unidad;
-      sel.appendChild(U.el('option', { value: valor, text: u, selected: valor === puesto ? 'selected' : null }));
-    });
-    sel.addEventListener('change', function () {
-      if (sel.value === '__libres') { filtro.soloLibres = true; filtro.unidad = 'Todos'; }
-      else { filtro.soloLibres = false; filtro.unidad = sel.value; }
-      pintarLista();
-    });
-    fila.appendChild(sel);
+    if (filtro.vista === 'base') {
+      var sel = U.el('select', { class: 'inp filtro', title: 'Filtrar por unidad' });
+      ['Todos'].concat(U.UNIDADES_MIEMBRO).forEach(function (u) {
+        sel.appendChild(U.el('option', { value: u, text: u, selected: u === filtro.unidad ? 'selected' : null }));
+      });
+      sel.addEventListener('change', function () { filtro.unidad = sel.value; pintarLista(); });
+      fila.appendChild(sel);
+    }
     side.appendChild(fila);
 
-    side.appendChild(U.el('div', { class: 'sb-list', id: 'sb-list' }));
-
-    var banco = U.el('div', { class: 'sb-banco' });
-    banco.appendChild(U.el('h4', { text: 'Reservas · banco' }));
-    var zona = U.el('div', { class: 'banco-zona' });
-    (p.reservas || []).forEach(function (id) {
-      zona.appendChild(U.el('span', {
-        class: 'banco-chip', text: U.nombreMiembro(id),
-        onclick: function () { quitarReserva(id); render(); }
-      }));
+    var lista = U.el('div', { class: 'sb-list', id: 'sb-list' });
+    /* soltar un nombre del roster acá lo devuelve a la pre-lista */
+    lista.addEventListener('dragover', function (e) {
+      if (!arrastrando || !arrastrando.from) return;
+      e.preventDefault(); lista.classList.add('drop');
     });
-    if (!p.reservas.length) zona.appendChild(U.el('span', { class: 'vacio', text: 'Arrastrá nombres acá' }));
-    zona.addEventListener('dragover', function (e) { e.preventDefault(); zona.classList.add('drop'); });
-    zona.addEventListener('dragleave', function () { zona.classList.remove('drop'); });
-    zona.addEventListener('drop', function (e) {
-      e.preventDefault(); zona.classList.remove('drop');
-      var id = (arrastrando && arrastrando.m) || e.dataTransfer.getData('text/plain');
-      if (!id || id.indexOf('bloque:') === 0) return;
-      if (arrastrando && arrastrando.from) U.asignar(arrastrando.from[0], arrastrando.from[1], null);
-      if (p.reservas.indexOf(id) < 0) p.reservas.push(id);
-      arrastrando = null; U.save(); render();
+    lista.addEventListener('dragleave', function (e) { if (e.target === lista) lista.classList.remove('drop'); });
+    lista.addEventListener('drop', function (e) {
+      lista.classList.remove('drop');
+      if (!arrastrando || !arrastrando.from) return;
+      e.preventDefault();
+      U.asignar(arrastrando.from[0], arrastrando.from[1], null);
+      arrastrando = null; render();
     });
-    banco.appendChild(zona);
-    side.appendChild(banco);
+    side.appendChild(lista);
 
     side.appendChild(U.el('div', { class: 'sb-pie' }, [
       U.el('button', { class: 'btn sm', text: '＋ Jugador', onclick: nuevoJugador }),
-      U.el('button', { class: 'btn sm', text: '⇪ Importar', onclick: importarPegado }),
       U.el('button', {
         class: 'btn sm ghost', text: 'Vaciar roster', onclick: function () {
-          U.confirmar('Se borran todas las asignaciones de esta partida. ¿Seguimos?', function () {
-            var p = U.partida(); p.asignaciones = {}; p.reservas = []; U.save(); render();
+          U.confirmar('Se borran las asignaciones de esta partida. Los convocados quedan en la lista. ¿Seguimos?', function () {
+            var p = U.partida(); p.asignaciones = {}; U.save(); render();
           });
         }
       })
@@ -313,46 +313,131 @@ U.roster = (function () {
     pintarLista();
   }
 
+  function filaJugador(m, extra) {
+    var gs = U.gruposDe(m.id);
+    var b = gs.length ? U.bloque(gs[0]) : null;
+    var row = U.el('div', {
+      class: 'sb-row' + (gs.length ? ' asignado' : ''), draggable: 'true',
+      title: b ? 'En ' + b.titulo : 'Arrastralo a un puesto del roster',
+      style: { '--c': b ? U.unit(b.unidad).color : 'transparent', '--e': U.ESTADO_COLOR[m.estado] || '#5a4d2a' }
+    }, [
+      U.el('span', { class: 'dot' }),
+      U.el('span', { class: 'nm', text: m.nombre }),
+      b ? U.el('span', { class: 'donde', text: b.titulo.replace(/ ·.*/, '') }) : null,
+      extra
+    ]);
+    row.addEventListener('dragstart', function (e) { arrastrando = { m: m.id }; e.dataTransfer.setData('text/plain', m.id); });
+    row.addEventListener('dragend', function () { arrastrando = null; });
+    row.addEventListener('dblclick', function () { editarJugador(m); });
+    return row;
+  }
+
   function pintarLista() {
     var lista = U.$('#sb-list'); if (!lista) return;
+    var p = U.partida();
     U.vaciar(lista);
     var q = filtro.q.trim().toLowerCase();
+    var pasa = function (m) { return m && (!q || m.nombre.toLowerCase().indexOf(q) >= 0); };
+
+    if (filtro.vista === 'conv') {
+      var conv = p.convocados.map(U.miembro).filter(pasa);
+      if (!p.convocados.length) {
+        lista.appendChild(U.el('p', { class: 'sb-vacio', text: 'Pegá la votación de Discord o sumá gente desde “Toda la base”.' }));
+        return;
+      }
+      var libres = conv.filter(function (m) { return !U.gruposDe(m.id).length; });
+      var puestos = conv.filter(function (m) { return U.gruposDe(m.id).length; });
+      var seccion = function (tit, arr) {
+        if (!arr.length) return;
+        lista.appendChild(U.el('h4', { class: 'sb-sec', html: tit + ' <b>' + arr.length + '</b>' }));
+        arr.forEach(function (m) {
+          lista.appendChild(filaJugador(m, U.el('button', {
+            class: 'x', text: '✕', title: 'Sacar de los convocados',
+            onclick: function (e) { e.stopPropagation(); U.desconvocar(m.id); render(); }
+          })));
+        });
+      };
+      seccion('Sin puesto', libres);
+      seccion('En el roster', puestos);
+      return;
+    }
+
     U.state.miembros
-      .filter(function (m) {
-        if (q && m.nombre.toLowerCase().indexOf(q) < 0) return false;
-        if (filtro.unidad !== 'Todos' && m.unidad !== filtro.unidad) return false;
-        if (filtro.soloLibres && U.gruposDe(m.id).length) return false;
-        return true;
-      })
+      .filter(function (m) { return pasa(m) && (filtro.unidad === 'Todos' || m.unidad === filtro.unidad); })
       .forEach(function (m) {
-        var gs = U.gruposDe(m.id);
-        var b = gs.length ? U.bloque(gs[0]) : null;
-        var color = b ? U.unit(b.unidad).color : 'transparent';
-        var row = U.el('div', {
-          class: 'sb-row' + (gs.length ? ' asignado' : ''), draggable: 'true',
-          style: { '--c': color, '--e': U.ESTADO_COLOR[m.estado] || '#5a4d2a' }
-        }, [
-          U.el('span', { class: 'dot' }),
-          U.el('span', { class: 'nm', text: m.nombre }),
-          U.el('button', {
-            class: 'est', title: 'Estado: ' + m.estado + ' (clic para cambiar)',
-            onclick: function (e) {
-              e.stopPropagation();
-              m.estado = U.ESTADO_SIGUIENTE[m.estado] || 'Activo';
-              U.save(); pintarLista(); U.emit('dash');
-            }
-          })
-        ]);
-        row.addEventListener('dragstart', function (e) { arrastrando = { m: m.id }; e.dataTransfer.setData('text/plain', m.id); });
-        row.addEventListener('dblclick', function () { editarJugador(m); });
-        lista.appendChild(row);
+        var esta = p.convocados.indexOf(m.id) >= 0;
+        lista.appendChild(filaJugador(m, U.el('button', {
+          class: 'x mas' + (esta ? ' on' : ''), text: esta ? '✓' : '＋',
+          title: esta ? 'Ya está convocado' : 'Sumar a los convocados',
+          onclick: function (e) {
+            e.stopPropagation();
+            if (esta) return;
+            U.convocar([m.id]); pintarSidebar();
+          }
+        })));
       });
   }
 
-  function quitarReserva(id) {
-    var p = U.partida(); if (!p) return;
-    var i = p.reservas.indexOf(id);
-    if (i >= 0) { p.reservas.splice(i, 1); U.save(); }
+  /* ---------------- votación de Discord ----------------
+     Se pega tal cual sale del canal: un nombre por línea o separados
+     por coma. Se limpian números, viñetas, @ y emojis, y se busca cada
+     uno en la base sin importar mayúsculas ni símbolos. */
+  function limpio(t) { return String(t || '').toLowerCase().replace(/[^a-z0-9ñáéíóúü]/g, ''); }
+
+  function leerVotacion(txt) {
+    var vistos = {}, out = { ok: [], nuevos: [] };
+    txt.split(/[\n,;]+/).forEach(function (l) {
+      var nom = l.replace(/^\s*(\d+[.)-]?|[-*•·>]+)\s*/, '').replace(/@/g, '')
+        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}️]/gu, '').trim();
+      var k = limpio(nom);
+      if (!k || vistos[k]) return;
+      vistos[k] = true;
+      var m = U.state.miembros.find(function (x) { return limpio(x.nombre) === k; })
+        || U.state.miembros.find(function (x) { var n = limpio(x.nombre); return n.length > 2 && (n.indexOf(k) >= 0 || k.indexOf(n) >= 0); });
+      if (m) { if (out.ok.indexOf(m) < 0) out.ok.push(m); }
+      else out.nuevos.push(nom);
+    });
+    return out;
+  }
+
+  function pegarVotacion() {
+    var ta = U.el('textarea', { class: 'inp ta', placeholder: 'Pegá los nombres de la votación.\nUno por línea o separados por coma.' });
+    var prev = U.el('div', { class: 'vot-prev' });
+    var cuerpo = U.el('div', { class: 'form' }, [ta, prev]);
+    var pie = U.el('div', { class: 'modal-pie' });
+    var mm = U.modal('Votación de Discord', cuerpo, { pie: pie });
+    var r = { ok: [], nuevos: [] };
+    function pintar() {
+      r = leerVotacion(ta.value);
+      U.vaciar(prev);
+      if (!r.ok.length && !r.nuevos.length) return;
+      prev.appendChild(U.el('p', { class: 'vot-t', text: r.ok.length + ' encontrados en la base' }));
+      prev.appendChild(U.el('div', { class: 'vot-chips' }, r.ok.map(function (m) {
+        return U.el('span', { class: 'vot-chip ok', text: m.nombre });
+      })));
+      if (r.nuevos.length) {
+        prev.appendChild(U.el('p', { class: 'vot-t', text: r.nuevos.length + ' no están: se agregan a la base' }));
+        prev.appendChild(U.el('div', { class: 'vot-chips' }, r.nuevos.map(function (n) {
+          return U.el('span', { class: 'vot-chip nuevo', text: n });
+        })));
+      }
+    }
+    ta.addEventListener('input', pintar);
+    pie.appendChild(U.el('button', { class: 'btn', text: 'Cancelar', onclick: function () { mm.cerrar(); } }));
+    pie.appendChild(U.el('button', {
+      class: 'btn primary', text: 'Convocar', onclick: function () {
+        pintar();
+        var ids = r.ok.map(function (m) { return m.id; });
+        r.nuevos.forEach(function (n) {
+          var nm = { id: U.uid('m'), nombre: n, steam: '', discord: '', unidad: 'Infantería', estado: 'Activo', dias: [], notas: '', partidas: 0, asistencias: 0 };
+          U.state.miembros.push(nm); ids.push(nm.id);
+        });
+        var n = U.convocar(ids);
+        filtro.vista = 'conv';
+        mm.cerrar(); render(); U.emit('dash');
+        U.toast(n + ' convocados' + (r.nuevos.length ? ' · ' + r.nuevos.length + ' nuevos en la base' : ''));
+      }
+    }));
   }
 
   /* ---------------- alta y edición de jugadores ---------------- */

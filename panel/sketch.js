@@ -8,16 +8,18 @@
      SVG), no a ojo: aunque la ventana cambie, el dibujo no se corre.
    · Cada objeto puede pertenecer a un grupo del roster: hereda su
      color y la leyenda de la derecha dice quién va ahí.
+   · Un clic pone el objeto y listo. Arrastrarlo lo mueve; doble clic
+     lo abre para editar (tamaño, giro, grupo). Sin marco de selección.
    · Ctrl+Z / Ctrl+Y sobre cada slide.
    =================================================================== */
 window.U = window.U || {};
 
 U.sketch = (function () {
-  var host, svg, gMapa, gObjs, gTmp, leyenda, slidesBar, toolbar, marcoMapa, barraObj, cabecera;
+  var host, svg, gMapa, gObjs, gTmp, gSel, leyenda, slidesBar, toolbar, marcoMapa, barraObj, cabecera;
   var NAT = { w: 1920, h: 1920 };
   var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55';
   var grosor = 7, escalaIcono = 1, iconoActivo = 'garrison';
-  var sel = null, dibujando = null, shotsCache = {}, paneo = null;
+  var sel = null, dibujando = null, shotsCache = {}, paneo = null, recien = null, pinT = null;
   var vista = { z: 1, x: 0, y: 0 };   // zoom y esquina del viewBox
   var abierto = { iconos: true, mapa: false };
   var historia = {}, futuro = {};
@@ -100,8 +102,9 @@ U.sketch = (function () {
       U.el('button', { text: '⤢', title: 'Ver el mapa entero', onclick: function () { encuadrar(); } })
     ]));
     svg = ns('svg', { class: 'sk-svg', xmlns: 'http://www.w3.org/2000/svg' });
-    gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g');
-    svg.appendChild(gMapa); svg.appendChild(gObjs); svg.appendChild(gTmp);
+    gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g'); gSel = ns('g', { class: 'sk-selcapa' });
+    svg.appendChild(defsSVG());
+    svg.appendChild(gMapa); svg.appendChild(gObjs); svg.appendChild(gTmp); svg.appendChild(gSel);
     marcoMapa.appendChild(svg);
     lienzo.appendChild(marcoMapa);
 
@@ -185,6 +188,7 @@ U.sketch = (function () {
     var et = U.$('#sk-zoom-val');
     if (et) et.textContent = Math.round(vista.z * 100) + '%';
     if (marcoMapa) marcoMapa.classList.toggle('con-zoom', vista.z > 1);
+    if (sel && !dibujando) pintarSel();
   }
   function zoomA(z, cx, cy) {
     var nz = Math.max(1, Math.min(ZMAX, z));
@@ -202,7 +206,7 @@ U.sketch = (function () {
 
   /* ---------------- barra de herramientas ---------------- */
   var TOOLS = [
-    { id: 'sel', ico: '➚', t: 'Seleccionar y mover · V' },
+    { id: 'sel', ico: '➚', t: 'Mover · V — arrastrá para mover, doble clic para editar, Q/E gira' },
     { id: 'pen', ico: '✎', t: 'Trazo libre · P — mantené apretado para el grosor' },
     { id: 'line', ico: '↗', t: 'Flecha · L — mantené apretado para el grosor' },
     { id: 'rect', ico: '▭', t: 'Zona rectangular · R' },
@@ -289,7 +293,8 @@ U.sketch = (function () {
         var gi = U.el('div', { class: 'sk-iconos' });
         grupos[gr].forEach(function (ic) {
           var b = U.el('button', {
-            class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : ''), title: ic.nombre,
+            class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : '') + (ic.grupo === 'vehículos' ? ' veh' : ''), title: ic.nombre,
+            style: { '--c': colorActual() },
             onclick: function () { iconoActivo = ic.id; tool = 'icon'; pintarTools(); }
           });
           if (ic.img) {
@@ -444,6 +449,10 @@ U.sketch = (function () {
         escalarSel(e.deltaY > 0 ? 0.9 : 1.11);
         return;
       }
+      if (e.altKey && sel && rotable(sel)) {          // Alt + rueda: girarlo
+        girarSel(e.deltaY > 0 ? 15 : -15);
+        return;
+      }
       var p = svgPt(e);
       zoomA(vista.z * (e.deltaY > 0 ? 0.82 : 1.22), p.x, p.y);
     }, { passive: false });
@@ -451,11 +460,14 @@ U.sketch = (function () {
     svg.addEventListener('pointerdown', down);
     svg.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    /* doble clic sobre algo = editarlo */
     svg.addEventListener('dblclick', function (e) {
       if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) { cerrarPoly(); return; }
+      clearTimeout(pinT);
       var obj = objetoDe(e);
-      seleccionar(obj || null);
-      if (obj && obj.tipo === 'pin') abrirPin(obj);
+      if (!obj) return;
+      if (tool !== 'sel') { tool = 'sel'; pintarTools(); }
+      seleccionar(obj);
     });
 
     document.addEventListener('keydown', function (e) {
@@ -467,11 +479,12 @@ U.sketch = (function () {
       if (ctrl) return;
       var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
       var k = e.key.toLowerCase();
-      if (mapa[k]) { tool = mapa[k]; pintarTools(); }
+      if (mapa[k]) { tool = mapa[k]; sel = null; pintarTools(); render(); }
       if (e.key === '+' || e.key === '=') zoomA(vista.z * 1.4);
       if (e.key === '-' || e.key === '_') zoomA(vista.z / 1.4);
       if (k === '0') encuadrar();
       if ((e.key === 'Delete' || e.key === 'Backspace') && sel) borrar(sel);
+      if ((k === 'q' || k === 'e') && sel && rotable(sel)) girarSel(k === 'q' ? -15 : 15);
       if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); cerrarPop(); render(); }
     });
 
@@ -506,29 +519,39 @@ U.sketch = (function () {
     return hit ? objs().find(function (o) { return o.id === hit.getAttribute('data-id'); }) : null;
   }
 
+  /* Cómo responde el mapa:
+     · Cursor: arrastrar un objeto lo mueve, arrastrar el mapa lo corre,
+       clic en el vacío suelta la selección.
+     · Ícono: clic pone uno. Arrastrar un objeto lo mueve igual.
+     · Trazos y zonas: se dibujan; la herramienta queda puesta.
+     · Doble clic sobre cualquier cosa: se abre para editarla. */
   function down(e) {
     if (!hay()) return;
     cerrarPop();
     var p = svgPt(e);
     var obj = objetoDe(e);
 
-    /* Con el cursor: arrastrar mueve el mapa, salvo que agarres el
-       objeto que ya está seleccionado. Para seleccionar, doble clic. */
-    if (e.button === 1 || e.button === 2 || e.shiftKey ||
-        (e.button === 0 && tool === 'sel' && obj !== sel)) {
-      paneo = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y };
-      marcoMapa.classList.add('paneando');
+    var asa = e.target.closest ? e.target.closest('[data-asa]') : null;
+    if (asa && sel && e.button === 0) {
+      snapshot();
+      var c = centro(sel);
+      dibujando = { modo: 'rotar', o: sel, c: c };
+      svg.setPointerCapture && svg.setPointerCapture(e.pointerId);
       return;
     }
+
+    if (e.button === 1 || e.button === 2 || e.shiftKey) { empezarPaneo(e, false); return; }
     if (e.button !== 0) return;
 
-    if (tool === 'del') { if (obj) borrar(obj); return; }
+    if (tool === 'del') { if (obj) borrar(obj); else empezarPaneo(e, false); return; }
 
-    if (tool === 'sel') {
-      if (obj && obj === sel) {
-        snapshot();
-        dibujando = { modo: 'mover', o: obj, p0: p, snap: JSON.parse(JSON.stringify(obj)), movido: false };
+    if (tool === 'sel' || tool === 'icon') {
+      if (obj) {
+        dibujando = { modo: 'mover', o: obj, p0: p, sx: e.clientX, sy: e.clientY, snap: JSON.parse(JSON.stringify(obj)), movido: false };
+        return;
       }
+      if (tool === 'sel') { empezarPaneo(e, true); return; }
+      dibujando = { modo: 'colocar', p: p, sx: e.clientX, sy: e.clientY, e: e };
       return;
     }
     if (tool === 'pen') { dibujando = { modo: 'pen', pts: [[p.x, p.y]] }; return; }
@@ -538,7 +561,6 @@ U.sketch = (function () {
       else dibujando.pts.push([p.x, p.y]);
       previa(); return;
     }
-    if (tool === 'icon') { nuevo({ tipo: 'icon', icono: iconoActivo, x: p.x, y: p.y, escala: escalaIcono }); return; }
     if (tool === 'text') {
       U.pedirTexto('Texto en el mapa', '', function (t) {
         if (t) { nuevo({ tipo: 'text', texto: t, x: p.x, y: p.y, size: Math.round(40 * escalaIcono) }); }
@@ -551,8 +573,14 @@ U.sketch = (function () {
     }
   }
 
+  function empezarPaneo(e, esClic) {
+    paneo = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y, clic: esClic, movido: false };
+  }
+
   function move(e) {
     if (paneo) {
+      if (!paneo.movido && Math.abs(e.clientX - paneo.x) + Math.abs(e.clientY - paneo.y) < 4) return;
+      if (!paneo.movido) { paneo.movido = true; marcoMapa.classList.add('paneando'); }
       var k = escalaPantalla();
       vista.x = paneo.vx - (e.clientX - paneo.x) / k;
       vista.y = paneo.vy - (e.clientY - paneo.y) / k;
@@ -560,23 +588,49 @@ U.sketch = (function () {
       return;
     }
     if (!dibujando) return;
+    var d = dibujando;
     var p = svgPt(e);
-    if (dibujando.modo === 'pen') { dibujando.pts.push([p.x, p.y]); previa(); }
-    else if (dibujando.modo === 'mover') {
-      var dx = p.x - dibujando.p0.x, dy = p.y - dibujando.p0.y;
-      if (Math.abs(dx) + Math.abs(dy) > 2) dibujando.movido = true;
-      var o = dibujando.o, s = dibujando.snap;
-      if (s.pts) o.pts = s.pts.map(function (q) { return [q[0] + dx, q[1] + dy]; });
-      if (s.x !== undefined) { o.x = s.x + dx; o.y = s.y + dy; }
-      if (s.x2 !== undefined) { o.x2 = s.x2 + dx; o.y2 = s.y2 + dy; }
-      render();
+    if (d.modo === 'pen') { d.pts.push([p.x, p.y]); previa(); }
+    else if (d.modo === 'colocar') {
+      // si arrastra en vez de hacer clic, en realidad quiere mover el mapa
+      if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) > 5) {
+        dibujando = null;
+        paneo = { x: d.sx, y: d.sy, vx: vista.x, vy: vista.y, clic: false, movido: true };
+        marcoMapa.classList.add('paneando');
+        move(e);
+      }
     }
-    else if (dibujando.b !== undefined) { dibujando.b = p; previa(); }
-    else if (dibujando.modo === 'poly') previa();
+    else if (d.modo === 'mover') {
+      if (!d.movido) {
+        if (Math.abs(e.clientX - d.sx) + Math.abs(e.clientY - d.sy) < 4) return;
+        d.movido = true; snapshot();
+        marcoMapa.classList.add('moviendo');
+      }
+      var dx = p.x - d.p0.x, dy = p.y - d.p0.y;
+      var o = d.o, sn = d.snap;
+      if (sn.pts) o.pts = sn.pts.map(function (q) { return [q[0] + dx, q[1] + dy]; });
+      if (sn.x !== undefined) { o.x = sn.x + dx; o.y = sn.y + dy; }
+      if (sn.x2 !== undefined) { o.x2 = sn.x2 + dx; o.y2 = sn.y2 + dy; }
+      repintarObj(o);
+    }
+    else if (d.modo === 'rotar') {
+      var ang = Math.atan2(p.x - d.c.x, -(p.y - d.c.y)) * 180 / Math.PI;
+      if (e.shiftKey) ang = Math.round(ang / 15) * 15;
+      d.o.rot = Math.round((ang + 360) % 360);
+      repintarObj(d.o);
+      var rr = U.$('#sk-rot'); if (rr) { rr.value = d.o.rot; rr.nextSibling.textContent = d.o.rot + '°'; }
+    }
+    else if (d.b !== undefined) { d.b = p; previa(); }
+    else if (d.modo === 'poly') previa();
   }
 
   function up() {
-    if (paneo) { paneo = null; marcoMapa.classList.remove('paneando'); return; }
+    if (paneo) {
+      var pn = paneo; paneo = null;
+      marcoMapa.classList.remove('paneando');
+      if (pn.clic && !pn.movido && sel) seleccionar(null);   // clic en el vacío: suelta
+      return;
+    }
     if (!dibujando) return;
     var d = dibujando;
     if (d.modo === 'pen') {
@@ -595,13 +649,24 @@ U.sketch = (function () {
       var r = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
       if (r > 10) nuevo({ tipo: 'circle', x: d.a.x, y: d.a.y, r: r });
       dibujando = null;
-    } else if (d.modo === 'mover') {
-      if (d.movido) U.save();
-      else {
-        (historia[slide().id] || []).pop();
-        if (d.o.tipo === 'pin') abrirPin(d.o);      // clic simple = verla grande
-      }
+    } else if (d.modo === 'colocar') {
       dibujando = null;
+      nuevo({ tipo: 'icon', icono: iconoActivo, x: d.p.x, y: d.p.y, escala: escalaIcono });
+      return;
+    } else if (d.modo === 'mover') {
+      dibujando = null;
+      marcoMapa.classList.remove('moviendo');
+      if (d.movido) { U.save(); render(); return; }
+      // clic simple sobre una captura: se abre, salvo que venga un doble clic
+      if (d.o.tipo === 'pin') {
+        clearTimeout(pinT);
+        pinT = setTimeout(function () { abrirPin(d.o); }, 260);
+      }
+      return;
+    } else if (d.modo === 'rotar') {
+      dibujando = null;
+      U.save(); render();
+      return;
     }
     U.vaciar(gTmp);
     render();
@@ -629,9 +694,12 @@ U.sketch = (function () {
     if (grupoActivo === '__libre') o.color = colorLibre; else o.grupo = grupoActivo;
     objs().push(o);
     renumerar();
-    sel = o;                       // queda listo para ajustarle el tamaño
-    if (tool !== 'pen') tool = 'sel';
+    // un clic y queda puesto: no se selecciona ni hay que "fijarlo".
+    // Para editarlo después, doble clic.
+    sel = null; recien = o.id;
+    if (o.tipo === 'text' || o.tipo === 'pin') tool = 'sel';
     U.save(); pintarTools(); render();
+    return o;
   }
 
   /* 1 SL = 1 OP: cada grupo numera sus OPs 1, 2, 3… en el orden que se
@@ -668,10 +736,8 @@ U.sketch = (function () {
     U.optimizarImagen(file, 1600).then(function (r) {
       var id = U.uid('shot');
       shotsCache[id] = r.url;                    // ya se puede dibujar
-      nuevo({ tipo: 'pin', x: p.x, y: p.y, shotId: id, etiqueta: '' });
-      tool = 'sel'; pintarTools(); render();
+      var o = nuevo({ tipo: 'pin', x: p.x, y: p.y, shotId: id, etiqueta: '' });
       U.shots.put(id, r.url);                    // en segundo plano
-      var o = sel;
       U.pedirTexto('Etiqueta del pin', '', function (t) {
         if (t && o) { o.etiqueta = t; U.save(); render(); }
       }, {
@@ -709,7 +775,10 @@ U.sketch = (function () {
     if (!svg) return;
     if (!hay()) { vacio(); return; }
     U.vaciar(gObjs);
+    if (sel && objs().indexOf(sel) < 0) sel = null;
     objs().forEach(function (o) { if (visible(o)) gObjs.appendChild(nodoDe(o)); });
+    recien = null;
+    pintarSel();
     svg.setAttribute('data-tool', tool);
     pintarCabecera();
     pintarBarraObj();
@@ -727,7 +796,14 @@ U.sketch = (function () {
 
   function nodoDe(o, sinSel) {
     var c = colorDe(o), g = o.grosor || 7;
-    var wrap = ns('g', { 'data-id': o.id, class: 'ob' + (!sinSel && sel === o ? ' sel' : '') });
+    var wrap = ns('g', { 'data-id': o.id, class: 'ob' + (!sinSel && sel === o ? ' sel' : '') + (!sinSel && recien === o.id ? ' nuevo' : '') });
+    var afuera = wrap;
+    // los íconos giran por dentro (el número queda derecho); el resto, entero
+    if (o.rot && o.tipo !== 'icon' && o.tipo !== 'pin') {
+      var cc = centro(o);
+      wrap = ns('g', { transform: 'rotate(' + o.rot + ' ' + cc.x + ' ' + cc.y + ')' });
+      afuera.appendChild(wrap);
+    }
     if (o.tipo === 'pen') {
       wrap.appendChild(ns('polyline', { points: o.pts.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: c, 'stroke-width': g, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
     } else if (o.tipo === 'line') {
@@ -754,14 +830,24 @@ U.sketch = (function () {
       var k = (o.escala || 1) * (NAT.w / 1100);
       var gi = ns('g', { transform: 'translate(' + o.x + ',' + o.y + ') scale(' + k + ')' });
       var ic = U.icono(o.icono);
+      var giro = o.rot ? ns('g', { transform: 'rotate(' + o.rot + ')' }) : null;
       if (ic && ic.img) {
-        // disco del color del grupo detrás del ícono del juego
-        gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: '#0b0a06', 'fill-opacity': .55 }));
-        gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: c, 'fill-opacity': .3, stroke: c, 'stroke-width': 3 }));
+        var esVehiculo = ic.grupo === 'vehículos';
         var iim = ns('image', { x: -21, y: -21, width: 42, height: 42, preserveAspectRatio: 'xMidYMid meet' });
         iim.setAttributeNS('http://www.w3.org/1999/xlink', 'href', U.ICONO_BASE + ic.img + '.png');
         iim.setAttributeNS(null, 'href', U.ICONO_BASE + ic.img + '.png');
-        gi.appendChild(iim);
+        if (esVehiculo) {
+          // como en el juego: vehículo oscuro sobre el disco del escuadrón
+          gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: c, 'fill-opacity': .92, stroke: '#0b0a06', 'stroke-width': 2.5 }));
+          iim.setAttribute('filter', 'url(#u235-oscuro)');
+          iim.setAttribute('x', -23); iim.setAttribute('y', -23);
+          iim.setAttribute('width', 46); iim.setAttribute('height', 46);
+        } else {
+          // disco del color del grupo detrás del ícono del juego
+          gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: '#0b0a06', 'fill-opacity': .55 }));
+          gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: c, 'fill-opacity': .3, stroke: c, 'stroke-width': 3 }));
+        }
+        if (giro) { giro.appendChild(iim); gi.appendChild(giro); } else gi.appendChild(iim);
         if (o.num) {
           gi.appendChild(ns('circle', { cx: 19, cy: -19, r: 13, fill: c, stroke: '#0b0a06', 'stroke-width': 2.5 }));
           var tn = ns('text', {
@@ -772,7 +858,7 @@ U.sketch = (function () {
           gi.appendChild(tn);
         }
       } else {
-        gi.innerHTML = iconSVG(o.icono, c);
+        gi.innerHTML = o.rot ? '<g transform="rotate(' + o.rot + ')">' + iconSVG(o.icono, c) + '</g>' : iconSVG(o.icono, c);
       }
       wrap.appendChild(gi);
       if (o.etiqueta) {
@@ -807,8 +893,54 @@ U.sketch = (function () {
       }
       wrap.appendChild(gp);
     }
-    if (!sinSel && sel === o) wrap.appendChild(marco(o));
-    return wrap;
+    return afuera;
+  }
+
+  /* reemplaza solo el nodo de un objeto: moverlo o girarlo no repinta
+     todo el panel, por eso va fluido */
+  function repintarObj(o) {
+    var viejo = gObjs.querySelector('[data-id="' + o.id + '"]');
+    var n = nodoDe(o);
+    if (viejo) gObjs.replaceChild(n, viejo); else gObjs.appendChild(n);
+    pintarSel();
+  }
+
+  /* filtro que oscurece los vehículos (va también en lo exportado) */
+  function defsSVG() {
+    var d = ns('defs');
+    d.innerHTML = '<filter id="u235-oscuro" color-interpolation-filters="sRGB">' +
+      '<feColorMatrix type="matrix" values="0 0 0 0 0.07  0 0 0 0 0.065  0 0 0 0 0.05  0 0 0 1 0"/></filter>';
+    return d;
+  }
+
+  function rotable(o) { return o && o.tipo !== 'pin' && o.tipo !== 'circle'; }
+  function centro(o) {
+    if (o.tipo === 'icon' || o.tipo === 'text' || o.tipo === 'pin') return { x: o.x, y: o.y };
+    var b = bbox(o);
+    return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+  }
+
+  /* lo único que marca la selección: una manija chica para girar */
+  function pintarSel() {
+    if (!gSel) return;
+    U.vaciar(gSel);
+    if (!sel || !visible(sel) || !rotable(sel)) return;
+    var px = 1 / (escalaPantalla() || 1);
+    var c = centro(sel), d;
+    if (sel.tipo === 'icon') d = 25 * (sel.escala || 1) * (NAT.w / 1100) + 22 * px;
+    else if (sel.tipo === 'text') d = (sel.size || 40) + 18 * px;
+    else { var b = bbox(sel); d = Math.max(b.w, b.h) / 2 + 22 * px; }
+    var a = (sel.rot || 0) * Math.PI / 180;
+    var hx = c.x + d * Math.sin(a), hy = c.y - d * Math.cos(a);
+    gSel.appendChild(ns('line', { x1: c.x, y1: c.y, x2: hx, y2: hy, stroke: '#fff', 'stroke-width': 1.5 * px, 'stroke-opacity': .55, 'stroke-dasharray': (4 * px) + ',' + (3 * px), 'pointer-events': 'none' }));
+    gSel.appendChild(ns('circle', { cx: hx, cy: hy, r: 7 * px, fill: '#fff', stroke: '#0b0a06', 'stroke-width': 2 * px, 'data-asa': 'rot', class: 'asa' }));
+  }
+
+  function girarSel(g) {
+    if (!sel) return;
+    snapshot();
+    sel.rot = Math.round(((sel.rot || 0) + g + 360) % 360);
+    U.save(); render();
   }
 
   function abrirPin(o) {
@@ -817,14 +949,6 @@ U.sketch = (function () {
     U.shots.get(o.shotId).then(function (u) {
       if (u) { shotsCache[o.shotId] = u; mostrar(u); }
       else U.toast('La captura no está disponible', 'err');
-    });
-  }
-
-  function marco(o) {
-    var b = bbox(o), m = NAT.w / 130;
-    return ns('rect', {
-      x: b.x - m, y: b.y - m, width: b.w + m * 2, height: b.h + m * 2,
-      fill: 'none', stroke: '#fff', 'stroke-width': NAT.w / 500, 'stroke-dasharray': m + ',' + m, class: 'marco'
     });
   }
 
@@ -908,6 +1032,21 @@ U.sketch = (function () {
     barraObj.appendChild(rng);
     barraObj.appendChild(val);
 
+    if (rotable(sel)) {
+      barraObj.appendChild(U.el('span', { class: 'et', text: 'Giro' }));
+      var rot = U.el('input', { type: 'range', id: 'sk-rot', class: 'giro', min: 0, max: 359, step: 1, value: sel.rot || 0 });
+      var rv = U.el('b', { class: 'giro-v', text: (sel.rot || 0) + '°' });
+      var antes = false;
+      rot.addEventListener('input', function () {
+        if (!antes) { snapshot(); antes = true; }
+        sel.rot = Number(rot.value); rv.textContent = rot.value + '°';
+        repintarObj(sel);
+      });
+      rot.addEventListener('change', function () { antes = false; U.save(); });
+      barraObj.appendChild(rot);
+      barraObj.appendChild(rv);
+    }
+
     barraObj.appendChild(U.el('button', {
       class: 'btn xs', text: '⧉', title: 'Duplicar',
       onclick: function () {
@@ -931,9 +1070,6 @@ U.sketch = (function () {
     barraObj.appendChild(U.el('button', {
       class: 'btn xs danger', text: '✕ Borrar', onclick: function () { borrar(sel); }
     }));
-    barraObj.appendChild(U.el('button', {
-      class: 'btn xs ghost', text: 'Listo', onclick: function () { seleccionar(null); }
-    }));
   }
   /* mientras movés el slider no queremos repintar todo el panel */
   function aplicarTamSinRepintar(o, v) {
@@ -946,8 +1082,7 @@ U.sketch = (function () {
       o.x -= (v - o.w) / 2; o.y -= (o.h * k - o.h) / 2;
       o.h = o.h * k; o.w = v;
     } else o.grosor = v;
-    U.vaciar(gObjs);
-    objs().forEach(function (x) { if (visible(x)) gObjs.appendChild(nodoDe(x)); });
+    repintarObj(o);
   }
   function nombreTipo(o) {
     if (o.tipo === 'icon') { var ic = U.icono(o.icono); return ic ? ic.nombre : 'ícono'; }
@@ -1115,6 +1250,7 @@ U.sketch = (function () {
       var sl = s.slides[i];
       U.vaciar(vista); U.vaciar(ley); U.vaciar(barra);
       var clon = ns('svg', { class: 'sk-svg', viewBox: '0 0 ' + NAT.w + ' ' + NAT.h });
+      clon.appendChild(defsSVG());
       clon.appendChild(gMapa.cloneNode(true));
       var go = ns('g');
       sl.objs.forEach(function (o) { go.appendChild(nodoDe(o, true)); });
@@ -1206,6 +1342,7 @@ U.sketch = (function () {
       xmlns: 'http://www.w3.org/2000/svg', 'xmlns:xlink': 'http://www.w3.org/1999/xlink',
       viewBox: '0 0 ' + NAT.w + ' ' + NAT.h, width: NAT.w, height: NAT.h
     });
+    clon.appendChild(defsSVG());
     clon.appendChild(gMapa.cloneNode(true));
     var go = ns('g');
     sl.objs.forEach(function (o) { go.appendChild(nodoDe(o, true)); });
