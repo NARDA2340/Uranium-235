@@ -258,8 +258,11 @@ U.sketch = (function () {
         title: g.titulo + ' · ' + U.plantel(g.id).length + ' jugadores',
         text: corto(g),
         onclick: function () {
+          // cambiar de color termina lo que se estaba haciendo: lo que ya
+          // está puesto no se toca y la herramienta queda lista para
+          // poner lo mismo con el color nuevo
           grupoActivo = g.id;
-          if (sel) { snapshot(); sel.grupo = g.id; delete sel.color; renumerar(); U.save(); }
+          terminar();
           pintarTools(); render();
         }
       }));
@@ -270,11 +273,11 @@ U.sketch = (function () {
     });
     libre.addEventListener('click', function () {
       grupoActivo = '__libre';
+      terminar();
       var inp = U.el('input', { type: 'color', value: colorLibre, class: 'sk-color-oculto' });
       document.body.appendChild(inp);
       inp.addEventListener('input', function () {
         colorLibre = inp.value;
-        if (sel) { snapshot(); sel.color = colorLibre; delete sel.grupo; U.save(); }
         pintarTools(); render();
       });
       inp.addEventListener('change', function () { inp.remove(); });
@@ -571,6 +574,13 @@ U.sketch = (function () {
       U.elegirArchivo('image/*', function (f) { agregarCaptura(f, p); });
       return;
     }
+  }
+
+  /* cierra lo que esté a medio hacer y suelta la selección */
+  function terminar() {
+    if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) cerrarPoly();
+    dibujando = null; U.vaciar(gTmp);
+    sel = null;
   }
 
   function empezarPaneo(e, esClic) {
@@ -1014,11 +1024,20 @@ U.sketch = (function () {
     if (!sel) { barraObj.classList.remove('on'); return; }
     barraObj.classList.add('on');
 
-    var g = sel.grupo ? U.bloque(sel.grupo) : null;
-    barraObj.appendChild(U.el('span', {
-      class: 'quien', style: { '--c': colorDe(sel) },
-      html: '<i></i>' + (g ? corto(g) : 'libre') + ' · ' + nombreTipo(sel)
-    }));
+    /* el color de algo ya puesto se cambia acá, a propósito */
+    var quien = U.el('span', { class: 'quien', style: { '--c': colorDe(sel) } }, [U.el('i')]);
+    var selG = U.el('select', { class: 'inp sm grupo-sel', title: 'Cambiar el grupo de este objeto' });
+    gruposDibujables().forEach(function (gr) {
+      selG.appendChild(U.el('option', { value: gr.id, text: corto(gr), selected: sel.grupo === gr.id ? 'selected' : null }));
+    });
+    if (!sel.grupo) selG.appendChild(U.el('option', { value: '', text: 'libre', selected: 'selected' }));
+    selG.addEventListener('change', function () {
+      if (!selG.value) return;
+      snapshot(); sel.grupo = selG.value; delete sel.color; renumerar(); U.save(); render();
+    });
+    quien.appendChild(selG);
+    quien.appendChild(U.el('span', { text: '· ' + nombreTipo(sel) }));
+    barraObj.appendChild(quien);
 
     var r = rangoTam(sel);
     barraObj.appendChild(U.el('span', { class: 'et', text: 'Tamaño' }));

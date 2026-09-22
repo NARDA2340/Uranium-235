@@ -728,12 +728,14 @@ textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:v
 .sk-obj.on{display:flex}
 .sk-obj .quien{display:flex;align-items:center;gap:7px;font-family:var(--f-mono);font-size:11px;color:var(--tan)}
 .sk-obj .quien i{width:11px;height:11px;background:var(--c);display:block;border-radius:2px}
+.sk-obj .grupo-sel{width:auto;padding:3px 6px;font-size:11px;font-family:var(--f-mono)}
 .sk-obj .et{font-family:var(--f-type);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--tan-dim);margin-left:8px}
 .sk-obj input[type=range]{flex:1 1 auto;max-width:420px;accent-color:var(--amber)}
 .sk-obj b{font-family:var(--f-mono);font-size:11.5px;color:var(--amber-hi);min-width:52px}
 .sk-obj .btn.xs{padding:4px 8px}
 .sk-obj input.giro{max-width:180px}
-.sk-ico.veh img{filter:brightness(0) opacity(.88);background:var(--c);border-radius:50%;padding:2px}
+.sk-ico.veh{background-image:radial-gradient(circle at center,var(--c) 0 60%,rgba(0,0,0,.5) 61% 64%,transparent 66%)}
+.sk-ico.veh img{filter:brightness(0) opacity(.9)}
 .sk-obj b.giro-v{min-width:40px}
 
 /* ojo de capa, estilo photoshop */
