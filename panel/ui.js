@@ -141,6 +141,9 @@ U.campo = function (label, valor, onChange, opts) {
     (opts.vacio ? [''] : []).concat(opts.opciones).forEach(function (o) {
       inp.appendChild(U.el('option', { value: o, text: o || '—', selected: o === valor ? 'selected' : null }));
     });
+  } else if (opts.tipo === 'date') {
+    inp = U.el('input', { class: 'inp', type: 'date', value: valor || '', min: '2024-01-01', max: '2030-12-31' });
+    inp.addEventListener('click', function () { try { inp.showPicker(); } catch (e) {} });
   } else {
     inp = U.el('input', { class: 'inp', value: valor || '', type: opts.tipo || 'text', placeholder: opts.ph || '' });
   }

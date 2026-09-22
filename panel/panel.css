@@ -48,7 +48,10 @@ body.panel::before{opacity:.55}
 .inp{
   background:#12100a;border:1px solid var(--line);color:var(--tan);
   font-family:var(--f-body);font-size:13.5px;padding:7px 9px;border-radius:2px;width:100%;
+  color-scheme:dark;
 }
+.inp[type=date]::-webkit-calendar-picker-indicator{filter:invert(.7);cursor:pointer}
+.inp[type=date]{cursor:pointer}
 .inp:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 2px rgba(201,154,46,.15)}
 select.inp{cursor:pointer}
 textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:vertical}
