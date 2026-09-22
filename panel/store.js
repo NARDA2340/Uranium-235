@@ -297,8 +297,7 @@ U.disponibles = function () {
   var orden = { 'Activo': 0, 'Tibio': 1, 'Inactivo': 2 };
   return U.state.miembros.filter(function (m) {
     if (conTarea[m.id] || enEscuadra[m.id]) return false;
-    if (m.estado === 'Inactivo') return false;
-    return !m.unidad || m.unidad === 'Infantería' || m.unidad === 'Oficiales' || m.unidad === 'Reservas';
+    return m.estado !== 'Inactivo';
   }).sort(function (a, b) { return (orden[a.estado] || 9) - (orden[b.estado] || 9); });
 };
 
@@ -326,9 +325,18 @@ U.rellenarBloque = function (gid) {
     if (k.split(':')[0] === gid) copia[k] = JSON.parse(JSON.stringify(p.asignaciones[k]));
   });
 
-  var libres = U.disponibles(), n = 0;
+  /* los líderes y las tareas de apertura se eligen a mano */
+  var aMano = U.ROLES_TAREA.concat(['SL', 'SL (PUSH)', 'SL (HOLD)', 'COMMANDER', 'CAP']);
+  var prefiere = b.tipo === 'tanque' ? 'Tanquistas' : null;
+  var libres = U.disponibles();
+  if (prefiere) {
+    var propios = libres.filter(function (m) { return m.unidad === prefiere; });
+    var resto = libres.filter(function (m) { return m.unidad !== prefiere; });
+    libres = propios.concat(resto);
+  }
+  var n = 0;
   b.slots.forEach(function (rol, i) {
-    if (U.ROLES_RELLENO.indexOf(rol) < 0) return;
+    if (aMano.indexOf(rol) >= 0) return;
     if (p.asignaciones[gid + ':' + i]) return;
     var m = libres.shift(); if (!m) return;
     p.asignaciones[gid + ':' + i] = { m: m.id, est: '' };

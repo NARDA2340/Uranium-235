@@ -91,7 +91,7 @@ U.roster = (function () {
         U.confirmar('¿Borrar el bloque "' + g.titulo + '"?', function () { U.borrarBloque(g.id); render(); });
       }
     }));
-    if (g.tipo === 'escuadra') head.appendChild(U.el('button', {
+    head.appendChild(U.el('button', {
       class: 'rayo' + (U.bloqueRellenado(g.id) ? ' on' : ''), text: '⚡',
       title: U.bloqueRellenado(g.id)
         ? 'Volver atrás el relleno de este bloque'
@@ -219,11 +219,10 @@ U.roster = (function () {
 
   /* ---------------- pie ---------------- */
   function pie(p) {
-    var box = U.el('div', { class: 'r-pie' });
-    box.appendChild(U.campo('Server name', p.server.name, function (v) { p.server.name = v; U.save(); }));
-    box.appendChild(U.campo('Server pass', p.server.pass, function (v) { p.server.pass = v; U.save(); }));
-    box.appendChild(U.campo('Briefing', p.briefing, function (v) { p.briefing = v; U.save(); }, { ph: 'hora / canal' }));
-    box.appendChild(U.campo('Resultado', p.resultado, function (v) { p.resultado = v; U.save(); U.emit('dash'); }, { ph: 'ej: 5-0 / 3-2 W' }));
+    var box = U.el('div', { class: 'r-pie solo-resultado' });
+    box.appendChild(U.campo('Resultado', p.resultado, function (v) {
+      p.resultado = v; U.save(); U.emit('dash'); U.emit('partidas');
+    }, { ph: 'ej: 5-0 / 3-2 W' }));
     return box;
   }
 

@@ -95,8 +95,7 @@ U.exportarImagenes = (function () {
     var mapa = U.map(p.strat.mapa || p.mapa);
     var datos = [
       ['FECHA', p.fecha], ['FORMATO', p.formato || p.modo], ['MAPA', mapa.nombre],
-      ['PUNTO', p.punto || '—'], ['BANDO', p.bando],
-      ['SERVER', p.server.name || '—'], ['PASS', p.server.pass || '—'], ['BRIEFING', p.briefing || '—']
+      ['PUNTO', p.punto || '—'], ['BANDO', p.bando], ['RESULTADO', p.resultado || '—']
     ];
     var dx = MARGEN, dw = (ANCHO - MARGEN * 2) / datos.length;
     datos.forEach(function (d) {

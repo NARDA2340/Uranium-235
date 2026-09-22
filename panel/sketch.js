@@ -13,13 +13,13 @@
 window.U = window.U || {};
 
 U.sketch = (function () {
-  var host, svg, gMapa, gObjs, gTmp, leyenda, slidesBar, toolbar, marcoMapa;
+  var host, svg, gMapa, gObjs, gTmp, leyenda, slidesBar, toolbar, marcoMapa, barraObj, cabecera;
   var NAT = { w: 1920, h: 1920 };
   var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55';
   var grosor = 7, escalaIcono = 1, iconoActivo = 'garrison';
   var sel = null, dibujando = null, shotsCache = {}, paneo = null;
   var vista = { z: 1, x: 0, y: 0 };   // zoom y esquina del viewBox
-  var abierto = { iconos: false, mapa: false };
+  var abierto = { iconos: true, mapa: false };
   var historia = {}, futuro = {};
 
   /* ---------------- helpers ---------------- */
@@ -28,6 +28,8 @@ U.sketch = (function () {
   function strat() { return P().strat; }
   function slide() { var s = strat(); return s.slides[Math.min(s.activa, s.slides.length - 1)]; }
   function objs() { return slide().objs; }
+  function ocultos() { var st = strat(); if (!st.ocultos) st.ocultos = {}; return st.ocultos; }
+  function visible(o) { return !(o.grupo && ocultos()[o.grupo]); }
   function colorDe(o) {
     if (o.grupo) { var g = U.group(o.grupo); if (g) return U.unit(g.unidad).color; }
     return o.color || colorLibre;
@@ -83,6 +85,8 @@ U.sketch = (function () {
 
     toolbar = U.el('div', { class: 'sk-tools' });
     var lienzo = U.el('div', { class: 'sk-lienzo' });
+    cabecera = U.el('div', { class: 'sk-cabecera', id: 'sk-cabecera' });
+    lienzo.appendChild(cabecera);
     leyenda = U.el('div', { class: 'sk-leyenda' });
     host.appendChild(toolbar);
     host.appendChild(lienzo);
@@ -101,10 +105,14 @@ U.sketch = (function () {
     marcoMapa.appendChild(svg);
     lienzo.appendChild(marcoMapa);
 
+    barraObj = U.el('div', { class: 'sk-obj', id: 'sk-obj' });
+    lienzo.appendChild(barraObj);
+
     slidesBar = U.el('div', { class: 'sk-slides' });
     lienzo.appendChild(slidesBar);
 
     eventos();
+    aplicarEscalaPaneles();
     if (!hay()) { vacio(); return; }
     pintarTools();
     cargarMapa();
@@ -200,15 +208,22 @@ U.sketch = (function () {
     { id: 'rect', ico: '▭', t: 'Zona rectangular · R' },
     { id: 'poly', ico: '⬠', t: 'Zona libre · G — doble clic cierra' },
     { id: 'circle', ico: '◯', t: 'Radio · C' },
-    { id: 'icon', ico: '⚑', t: 'Ícono táctico · I — mantené apretado para el tamaño' },
+    { id: 'icon', ico: '⚑', t: 'Poner el ícono elegido · I' },
     { id: 'text', ico: 'T', t: 'Texto · T — mantené apretado para el tamaño' },
-    { id: 'pin', ico: '⬚', t: 'Pin con captura real · S' },
+    { id: 'pin', ico: '▣', t: 'Pinear una captura del juego · S' },
     { id: 'del', ico: '⌫', t: 'Borrar: clic sobre el objeto · Supr' }
   ];
 
   function pintarTools() {
     if (!hay()) return;
     U.vaciar(toolbar);
+
+    /* --- tamaño de los paneles --- */
+    toolbar.appendChild(U.el('div', { class: 'sk-escala' }, [
+      U.el('button', { text: '−', title: 'Achicar los paneles', onclick: function () { escalaPaneles(-1); } }),
+      U.el('span', { text: 'paneles' }),
+      U.el('button', { text: '+', title: 'Agrandar los paneles', onclick: function () { escalaPaneles(1); } })
+    ]));
 
     /* --- herramientas --- */
     var gt = U.el('div', { class: 'sk-grid-tools' });
@@ -251,7 +266,7 @@ U.sketch = (function () {
     });
     libre.addEventListener('click', function () {
       grupoActivo = '__libre';
-      var inp = U.el('input', { type: 'color', value: colorLibre, class: 'oculto' });
+      var inp = U.el('input', { type: 'color', value: colorLibre, class: 'sk-color-oculto' });
       document.body.appendChild(inp);
       inp.addEventListener('input', function () {
         colorLibre = inp.value;
@@ -305,33 +320,30 @@ U.sketch = (function () {
       caja.appendChild(selMapa);
 
       var cps = capas();
-      [['grid', 'Cuadrícula'], ['puntos', 'Puntos y nombres']].forEach(function (c) {
-        caja.appendChild(U.el('button', {
-          class: 'sk-capa' + (cps[c[0]] ? ' on' : ''), text: c[1],
-          onclick: function () { cps[c[0]] = !cps[c[0]]; U.save(); cargarMapa(); pintarTools(); }
-        }));
-      });
-      caja.appendChild(U.el('p', { class: 'sk-credito', html: 'Texturas del juego + capas de <b>Maps Let Loose</b>.' }));
+      cps.grid = true;                               // la cuadrícula va siempre
+      caja.appendChild(U.el('button', {
+        class: 'sk-capa' + (cps.puntos ? ' on' : ''), text: 'Puntos y nombres',
+        onclick: function () { cps.puntos = !cps.puntos; U.save(); cargarMapa(); pintarTools(); }
+      }));
     }));
 
     /* --- acciones finales --- */
-    var fin = U.el('div', { class: 'sk-grp col' });
-    fin.appendChild(U.el('button', {
-      class: 'btn sm', text: '＋ Captura',
-      title: 'Subir una foto y pinearla en el mapa (también podés arrastrarla o pegarla con Ctrl+V)',
-      onclick: pedirCaptura
-    }));
-    fin.appendChild(U.el('button', {
-      class: 'btn sm ghost', text: 'Limpiar slide', onclick: function () {
-        U.confirmar('¿Borrar todo lo dibujado en esta slide?', function () {
-          snapshot(); slide().objs = []; sel = null; U.save(); render();
-        });
-      }
-    }));
-    toolbar.appendChild(fin);
+
   }
 
   /* nombre corto para la muestra de color y la leyenda */
+  /* tres tamaños de panel: chico, normal y grande */
+  function escalaPaneles(d) {
+    var n = (U.state.ui.panel || 1) + d;
+    U.state.ui.panel = Math.max(0, Math.min(2, n));
+    U.save();
+    aplicarEscalaPaneles();
+  }
+  function aplicarEscalaPaneles() {
+    var n = U.state.ui.panel == null ? 1 : U.state.ui.panel;
+    if (host) host.setAttribute('data-panel', n);
+  }
+
   function corto(g) {
     return String(g.titulo || '')
       .split('|')[0]
@@ -428,6 +440,10 @@ U.sketch = (function () {
     svg.addEventListener('wheel', function (e) {
       if (!hay()) return;
       e.preventDefault();
+      if ((e.ctrlKey || e.metaKey) && sel) {          // Ctrl + rueda: tamaño del objeto
+        escalarSel(e.deltaY > 0 ? 0.9 : 1.11);
+        return;
+      }
       var p = svgPt(e);
       zoomA(vista.z * (e.deltaY > 0 ? 0.82 : 1.22), p.x, p.y);
     }, { passive: false });
@@ -435,8 +451,11 @@ U.sketch = (function () {
     svg.addEventListener('pointerdown', down);
     svg.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
-    svg.addEventListener('dblclick', function () {
-      if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) cerrarPoly();
+    svg.addEventListener('dblclick', function (e) {
+      if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) { cerrarPoly(); return; }
+      var obj = objetoDe(e);
+      seleccionar(obj || null);
+      if (obj && obj.tipo === 'pin') abrirPin(obj);
     });
 
     document.addEventListener('keydown', function (e) {
@@ -493,10 +512,10 @@ U.sketch = (function () {
     var p = svgPt(e);
     var obj = objetoDe(e);
 
-    /* botón del medio o derecho: mover el mapa. Con zoom, el izquierdo
-       sobre el vacío y la herramienta de selección también. */
+    /* Con el cursor: arrastrar mueve el mapa, salvo que agarres el
+       objeto que ya está seleccionado. Para seleccionar, doble clic. */
     if (e.button === 1 || e.button === 2 || e.shiftKey ||
-        (e.button === 0 && tool === 'sel' && !obj && vista.z > 1)) {
+        (e.button === 0 && tool === 'sel' && obj !== sel)) {
       paneo = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y };
       marcoMapa.classList.add('paneando');
       return;
@@ -506,14 +525,10 @@ U.sketch = (function () {
     if (tool === 'del') { if (obj) borrar(obj); return; }
 
     if (tool === 'sel') {
-      sel = obj || null;
-      if (obj) {
+      if (obj && obj === sel) {
         snapshot();
         dibujando = { modo: 'mover', o: obj, p0: p, snap: JSON.parse(JSON.stringify(obj)), movido: false };
-        if (obj.grupo) grupoActivo = obj.grupo;
-        pintarTools();
       }
-      render();
       return;
     }
     if (tool === 'pen') { dibujando = { modo: 'pen', pts: [[p.x, p.y]] }; return; }
@@ -614,9 +629,8 @@ U.sketch = (function () {
     if (grupoActivo === '__libre') o.color = colorLibre; else o.grupo = grupoActivo;
     objs().push(o);
     renumerar();
-    // los íconos se siguen estampando: no quedan seleccionados
-    sel = (o.tipo === 'icon') ? null : o;
-    if (tool !== 'icon' && tool !== 'pen') tool = 'sel';
+    sel = o;                       // queda listo para ajustarle el tamaño
+    if (tool !== 'pen') tool = 'sel';
     U.save(); pintarTools(); render();
   }
 
@@ -695,8 +709,10 @@ U.sketch = (function () {
     if (!svg) return;
     if (!hay()) { vacio(); return; }
     U.vaciar(gObjs);
-    objs().forEach(function (o) { gObjs.appendChild(nodoDe(o)); });
+    objs().forEach(function (o) { if (visible(o)) gObjs.appendChild(nodoDe(o)); });
     svg.setAttribute('data-tool', tool);
+    pintarCabecera();
+    pintarBarraObj();
     pintarLeyenda();
     pintarSlides();
     pintarAcciones();
@@ -825,6 +841,132 @@ U.sketch = (function () {
     return { x: o.x - s, y: o.y - s, w: s * 2, h: s * 2 };
   }
 
+  /* ---------------- selección y tamaño ---------------- */
+  function seleccionar(o) {
+    sel = o;
+    if (o && o.grupo) { grupoActivo = o.grupo; pintarTools(); }
+    render();
+  }
+
+  /* qué significa "tamaño" según el tipo de objeto */
+  function rangoTam(o) {
+    if (!o) return null;
+    if (o.tipo === 'icon' || o.tipo === 'pin') return { min: 30, max: 320, paso: 5, unidad: '%' };
+    if (o.tipo === 'text') return { min: 14, max: 180, paso: 2, unidad: 'px' };
+    if (o.tipo === 'circle') return { min: 20, max: 900, paso: 5, unidad: '' };
+    if (o.tipo === 'rect') return { min: 30, max: 1800, paso: 10, unidad: '' };
+    return { min: 2, max: 40, paso: 1, unidad: '' };      // trazos
+  }
+  function valorTam(o) {
+    if (o.tipo === 'icon' || o.tipo === 'pin') return Math.round((o.escala || 1) * 100);
+    if (o.tipo === 'text') return Math.round(o.size || 40);
+    if (o.tipo === 'circle') return Math.round(o.r);
+    if (o.tipo === 'rect') return Math.round(o.w);
+    return Math.round(o.grosor || 7);
+  }
+  function aplicarTam(o, v) {
+    v = Number(v);
+    if (o.tipo === 'icon' || o.tipo === 'pin') o.escala = v / 100;
+    else if (o.tipo === 'text') o.size = v;
+    else if (o.tipo === 'circle') o.r = v;
+    else if (o.tipo === 'rect') {
+      var k = v / o.w;
+      o.x -= (v - o.w) / 2; o.y -= (o.h * k - o.h) / 2;
+      o.h = o.h * k; o.w = v;
+    } else o.grosor = v;
+    U.save(); render();
+  }
+  function escalarSel(k) {
+    if (!sel) return;
+    var r = rangoTam(sel);
+    var v = Math.max(r.min, Math.min(r.max, valorTam(sel) * k));
+    aplicarTam(sel, v);
+  }
+
+  /* barra horizontal al pie del mapa: aparece con algo seleccionado */
+  function pintarBarraObj() {
+    if (!barraObj) return;
+    U.vaciar(barraObj);
+    if (!sel) { barraObj.classList.remove('on'); return; }
+    barraObj.classList.add('on');
+
+    var g = sel.grupo ? U.bloque(sel.grupo) : null;
+    barraObj.appendChild(U.el('span', {
+      class: 'quien', style: { '--c': colorDe(sel) },
+      html: '<i></i>' + (g ? corto(g) : 'libre') + ' · ' + nombreTipo(sel)
+    }));
+
+    var r = rangoTam(sel);
+    barraObj.appendChild(U.el('span', { class: 'et', text: 'Tamaño' }));
+    var rng = U.el('input', { type: 'range', min: r.min, max: r.max, step: r.paso, value: valorTam(sel) });
+    var val = U.el('b', { text: valorTam(sel) + r.unidad });
+    rng.addEventListener('input', function () {
+      val.textContent = rng.value + r.unidad;
+      aplicarTamSinRepintar(sel, rng.value);
+    });
+    rng.addEventListener('change', function () { U.save(); render(); });
+    barraObj.appendChild(rng);
+    barraObj.appendChild(val);
+
+    barraObj.appendChild(U.el('button', {
+      class: 'btn xs', text: '⧉', title: 'Duplicar',
+      onclick: function () {
+        snapshot();
+        var c = JSON.parse(JSON.stringify(sel));
+        c.id = U.uid('o');
+        if (c.x !== undefined) { c.x += 40; c.y += 40; }
+        if (c.pts) c.pts = c.pts.map(function (q) { return [q[0] + 40, q[1] + 40]; });
+        objs().push(c); renumerar(); sel = c; U.save(); render();
+      }
+    }));
+    barraObj.appendChild(U.el('button', {
+      class: 'btn xs', text: '↑', title: 'Traer al frente',
+      onclick: function () {
+        snapshot();
+        var i = objs().indexOf(sel);
+        if (i >= 0) { objs().splice(i, 1); objs().push(sel); }
+        U.save(); render();
+      }
+    }));
+    barraObj.appendChild(U.el('button', {
+      class: 'btn xs danger', text: '✕ Borrar', onclick: function () { borrar(sel); }
+    }));
+    barraObj.appendChild(U.el('button', {
+      class: 'btn xs ghost', text: 'Listo', onclick: function () { seleccionar(null); }
+    }));
+  }
+  /* mientras movés el slider no queremos repintar todo el panel */
+  function aplicarTamSinRepintar(o, v) {
+    v = Number(v);
+    if (o.tipo === 'icon' || o.tipo === 'pin') o.escala = v / 100;
+    else if (o.tipo === 'text') o.size = v;
+    else if (o.tipo === 'circle') o.r = v;
+    else if (o.tipo === 'rect') {
+      var k = v / o.w;
+      o.x -= (v - o.w) / 2; o.y -= (o.h * k - o.h) / 2;
+      o.h = o.h * k; o.w = v;
+    } else o.grosor = v;
+    U.vaciar(gObjs);
+    objs().forEach(function (x) { if (visible(x)) gObjs.appendChild(nodoDe(x)); });
+  }
+  function nombreTipo(o) {
+    if (o.tipo === 'icon') { var ic = U.icono(o.icono); return ic ? ic.nombre : 'ícono'; }
+    return ({ pen: 'trazo', line: 'flecha', rect: 'zona', poly: 'zona', circle: 'radio', text: 'texto', pin: 'captura' })[o.tipo] || o.tipo;
+  }
+
+  /* datos de la partida, centrados arriba del mapa */
+  function pintarCabecera() {
+    if (!cabecera) return;
+    U.vaciar(cabecera);
+    var p = U.partida(); if (!p) return;
+    var m = U.map(strat().mapa);
+    cabecera.appendChild(U.el('b', { text: p.nombre }));
+    cabecera.appendChild(U.el('span', { text: p.fecha }));
+    cabecera.appendChild(U.el('span', { class: 'mapa', text: m.nombre }));
+    if (p.punto) cabecera.appendChild(U.el('span', { class: 'punto', text: p.punto }));
+    cabecera.appendChild(U.el('span', { text: p.formato || p.modo }));
+  }
+
   /* ---------------- leyenda ---------------- */
   var verTodos = false;
   function pintarLeyenda() {
@@ -850,11 +992,25 @@ U.sketch = (function () {
     grupos.forEach(function (g) {
       var u = U.unit(g.unidad), pl = U.plantel(g.id);
       var caja = U.el('div', { class: 'ley-grupo' + (grupoActivo === g.id ? ' on' : ''), style: { '--c': u.color } });
-      caja.appendChild(U.el('div', {
-        class: 'ley-t',
-        onclick: function () { grupoActivo = g.id; pintarTools(); pintarLeyenda(); resaltar(g.id); },
-        html: '<i></i><span>' + corto(g) + '</span><b>' + (usados[g.id] || 0) + '</b>'
+      var oculto = !!ocultos()[g.id];
+      var t = U.el('div', { class: 'ley-t' + (oculto ? ' apagada' : '') });
+      t.appendChild(U.el('button', {
+        class: 'ojo' + (oculto ? ' off' : ''),
+        title: oculto ? 'Mostrar esta capa en el mapa' : 'Ocultar esta capa del mapa',
+        html: oculto
+          ? '<svg viewBox="0 0 24 24"><path d="M3 3l18 18" /><path d="M10.6 6.2A9.7 9.7 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-3.1 3.4M6.3 7.9A15.5 15.5 0 0 0 3 12s4 6 9 6a9.4 9.4 0 0 0 3.6-.7" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>'
+          : '<svg viewBox="0 0 24 24"><path d="M3 12s4-6 9-6 9 6 9 6-4 6-9 6-9-6-9-6z" /><circle cx="12" cy="12" r="3" /></svg>',
+        onclick: function (e) {
+          e.stopPropagation();
+          if (oculto) delete ocultos()[g.id]; else ocultos()[g.id] = true;
+          U.save(); render();
+        }
       }));
+      t.appendChild(U.el('i'));
+      t.appendChild(U.el('span', { text: corto(g) }));
+      t.appendChild(U.el('b', { text: usados[g.id] || 0 }));
+      t.addEventListener('click', function () { grupoActivo = g.id; pintarTools(); pintarLeyenda(); resaltar(g.id); });
+      caja.appendChild(t);
       var ul = U.el('div', { class: 'ley-jug' });
       if (!pl.length) ul.appendChild(U.el('span', { class: 'vacio', text: 'sin jugadores' }));
       pl.forEach(function (j) {

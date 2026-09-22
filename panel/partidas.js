@@ -102,13 +102,12 @@ U.partidas = (function () {
         U.el('span', { text: p.modo }),
         U.el('span', { text: p.bando })
       ]));
-      card.appendChild(U.el('div', { class: 'pt-nums' }, [
-        num('Convocados', s.total, ''),
-        num('Vinieron', s.ok, 'ok'),
-        num('Faltaron', s.falta, s.falta ? 'bad' : ''),
-        num('Marcas', marcas, '')
+      card.appendChild(U.el('div', { class: 'pt-nums una' }, [
+        U.el('div', { class: 'pt-num res' + (p.resultado ? '' : ' vacio') }, [
+          U.el('b', { text: p.resultado || '—' }),
+          U.el('span', { text: 'Resultado' })
+        ])
       ]));
-      if (p.resultado) card.appendChild(U.el('div', { class: 'pt-res', text: 'Resultado: ' + p.resultado }));
 
       card.appendChild(U.el('div', { class: 'pt-acc' }, [
         U.el('button', {
