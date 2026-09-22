@@ -17,7 +17,8 @@ U.sketch = (function () {
   var NAT = { w: 1920, h: 1920 };
   var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55';
   var grosor = 7, escalaIcono = 1, iconoActivo = 'garrison';
-  var sel = null, dibujando = null, shotsCache = {};
+  var sel = null, dibujando = null, shotsCache = {}, paneo = null;
+  var vista = { z: 1, x: 0, y: 0 };   // zoom y esquina del viewBox
   var abierto = { iconos: false, mapa: false };
   var historia = {}, futuro = {};
 
@@ -88,6 +89,12 @@ U.sketch = (function () {
     host.appendChild(leyenda);
 
     marcoMapa = U.el('div', { class: 'sk-marco' });
+    marcoMapa.appendChild(U.el('div', { class: 'sk-zoom' }, [
+      U.el('button', { text: '−', title: 'Alejar', onclick: function () { zoomA(vista.z / 1.4); } }),
+      U.el('span', { id: 'sk-zoom-val', text: '100%' }),
+      U.el('button', { text: '+', title: 'Acercar (rueda del mouse)', onclick: function () { zoomA(vista.z * 1.4); } }),
+      U.el('button', { text: '⤢', title: 'Ver el mapa entero', onclick: function () { encuadrar(); } })
+    ]));
     svg = ns('svg', { class: 'sk-svg', xmlns: 'http://www.w3.org/2000/svg' });
     gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g');
     svg.appendChild(gMapa); svg.appendChild(gObjs); svg.appendChild(gTmp);
@@ -152,9 +159,37 @@ U.sketch = (function () {
     encuadrar();
   }
   function encuadrar() {
-    svg.setAttribute('viewBox', '0 0 ' + NAT.w + ' ' + NAT.h);
+    vista = { z: 1, x: 0, y: 0 };
     // el marco toma la proporción del mapa: así no quedan bandas negras
     if (marcoMapa) marcoMapa.style.aspectRatio = (NAT.w / NAT.h).toFixed(4);
+    aplicarVista();
+  }
+
+  /* ---------------- zoom ----------------
+     Todo pasa por el viewBox: el dibujo sigue cayendo exacto porque las
+     coordenadas se calculan con getScreenCTM, que ya lo tiene en cuenta. */
+  var ZMAX = 6;
+  function aplicarVista() {
+    var w = NAT.w / vista.z, h = NAT.h / vista.z;
+    vista.x = Math.max(0, Math.min(NAT.w - w, vista.x));
+    vista.y = Math.max(0, Math.min(NAT.h - h, vista.y));
+    svg.setAttribute('viewBox', vista.x.toFixed(2) + ' ' + vista.y.toFixed(2) + ' ' + w.toFixed(2) + ' ' + h.toFixed(2));
+    var et = U.$('#sk-zoom-val');
+    if (et) et.textContent = Math.round(vista.z * 100) + '%';
+    if (marcoMapa) marcoMapa.classList.toggle('con-zoom', vista.z > 1);
+  }
+  function zoomA(z, cx, cy) {
+    var nz = Math.max(1, Math.min(ZMAX, z));
+    if (cx === undefined) { cx = vista.x + NAT.w / vista.z / 2; cy = vista.y + NAT.h / vista.z / 2; }
+    var k = vista.z / nz;                       // cuánto cambia el ancho visible
+    vista.x = cx - (cx - vista.x) * k;
+    vista.y = cy - (cy - vista.y) * k;
+    vista.z = nz;
+    aplicarVista();
+  }
+  function escalaPantalla() {
+    var r = svg.getBoundingClientRect();
+    return r.width / (NAT.w / vista.z);         // px de pantalla por unidad de mapa
   }
 
   /* ---------------- barra de herramientas ---------------- */
@@ -390,6 +425,13 @@ U.sketch = (function () {
 
   /* ---------------- eventos del lienzo ---------------- */
   function eventos() {
+    svg.addEventListener('wheel', function (e) {
+      if (!hay()) return;
+      e.preventDefault();
+      var p = svgPt(e);
+      zoomA(vista.z * (e.deltaY > 0 ? 0.82 : 1.22), p.x, p.y);
+    }, { passive: false });
+    svg.addEventListener('contextmenu', function (e) { e.preventDefault(); });
     svg.addEventListener('pointerdown', down);
     svg.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
@@ -407,6 +449,9 @@ U.sketch = (function () {
       var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
       var k = e.key.toLowerCase();
       if (mapa[k]) { tool = mapa[k]; pintarTools(); }
+      if (e.key === '+' || e.key === '=') zoomA(vista.z * 1.4);
+      if (e.key === '-' || e.key === '_') zoomA(vista.z / 1.4);
+      if (k === '0') encuadrar();
       if ((e.key === 'Delete' || e.key === 'Backspace') && sel) borrar(sel);
       if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); cerrarPop(); render(); }
     });
@@ -443,10 +488,20 @@ U.sketch = (function () {
   }
 
   function down(e) {
-    if (e.button !== 0 || !hay()) return;
+    if (!hay()) return;
     cerrarPop();
     var p = svgPt(e);
     var obj = objetoDe(e);
+
+    /* botón del medio o derecho: mover el mapa. Con zoom, el izquierdo
+       sobre el vacío y la herramienta de selección también. */
+    if (e.button === 1 || e.button === 2 || e.shiftKey ||
+        (e.button === 0 && tool === 'sel' && !obj && vista.z > 1)) {
+      paneo = { x: e.clientX, y: e.clientY, vx: vista.x, vy: vista.y };
+      marcoMapa.classList.add('paneando');
+      return;
+    }
+    if (e.button !== 0) return;
 
     if (tool === 'del') { if (obj) borrar(obj); return; }
 
@@ -482,6 +537,13 @@ U.sketch = (function () {
   }
 
   function move(e) {
+    if (paneo) {
+      var k = escalaPantalla();
+      vista.x = paneo.vx - (e.clientX - paneo.x) / k;
+      vista.y = paneo.vy - (e.clientY - paneo.y) / k;
+      aplicarVista();
+      return;
+    }
     if (!dibujando) return;
     var p = svgPt(e);
     if (dibujando.modo === 'pen') { dibujando.pts.push([p.x, p.y]); previa(); }
@@ -499,6 +561,7 @@ U.sketch = (function () {
   }
 
   function up() {
+    if (paneo) { paneo = null; marcoMapa.classList.remove('paneando'); return; }
     if (!dibujando) return;
     var d = dibujando;
     if (d.modo === 'pen') {
@@ -978,8 +1041,41 @@ U.sketch = (function () {
     }
   }
 
+  /* ---------- lo que necesita el exportador ---------- */
+  function svgDeSlide(i) {
+    if (!hay()) return null;
+    var st = strat(), sl = st.slides[i];
+    if (!sl) return null;
+    var clon = ns('svg', {
+      xmlns: 'http://www.w3.org/2000/svg', 'xmlns:xlink': 'http://www.w3.org/1999/xlink',
+      viewBox: '0 0 ' + NAT.w + ' ' + NAT.h, width: NAT.w, height: NAT.h
+    });
+    clon.appendChild(gMapa.cloneNode(true));
+    var go = ns('g');
+    sl.objs.forEach(function (o) { go.appendChild(nodoDe(o, true)); });
+    clon.appendChild(go);
+    return { xml: new XMLSerializer().serializeToString(clon), w: NAT.w, h: NAT.h, nombre: sl.nombre };
+  }
+
+  function leyendaDeSlide(i) {
+    if (!hay()) return [];
+    var sl = strat().slides[i]; if (!sl) return [];
+    var usados = {};
+    sl.objs.forEach(function (o) { if (o.grupo) usados[o.grupo] = true; });
+    return U.bloques().filter(function (g) { return usados[g.id]; }).map(function (g) {
+      return {
+        titulo: corto(g), color: U.unit(g.unidad).color,
+        jugadores: U.plantel(g.id).map(function (j) {
+          return { nombre: j.nombre, rol: j.rol, lider: /SL|COMMANDER|CAP/.test(j.rol) };
+        })
+      };
+    });
+  }
+
   return {
     montar: montar,
+    svgDeSlide: svgDeSlide,
+    leyendaDeSlide: leyendaDeSlide,
     render: function () { if (svg) render(); },
     recargarMapa: function () {
       if (!svg) return;

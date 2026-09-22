@@ -56,8 +56,9 @@ U.partidas = (function () {
     barra.appendChild(buscar);
     barra.appendChild(U.el('button', { class: 'btn primary', text: '＋ Nueva partida', onclick: nueva }));
     barra.appendChild(U.el('button', {
-      class: 'btn', text: '↓ Exportar', title: 'Baja todo el panel a un archivo (incluye capturas)',
-      onclick: function () { U.exportar(true); U.toast('Exportando…'); }
+      class: 'btn', text: '⇩ Exportar',
+      title: 'Genera el roster y cada diapositiva como imagen para mandar al Discord',
+      onclick: function () { U.exportarImagenes.abrir(); }
     }));
     barra.appendChild(U.el('button', { class: 'btn', text: '↑ Importar', onclick: importar }));
     if (U.db.esNube()) barra.appendChild(U.el('button', {

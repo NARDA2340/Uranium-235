@@ -282,6 +282,63 @@ U.cambiarFormato = function (formato) {
    No toca a los que ya tienen tarea de apertura (ingenieros y choferes)
    ni repite gente que ya está en otra escuadra. Las cajas de supply sí
    pueden estar en los dos lados. */
+/* candidatos libres, ordenados por estado */
+U.disponibles = function () {
+  var p = U.partida(); if (!p) return [];
+  var conTarea = {}, enEscuadra = {};
+  Object.keys(p.asignaciones).forEach(function (k) {
+    var a = p.asignaciones[k]; if (!a || !a.m) return;
+    var gid = k.split(':')[0], i = +k.split(':')[1];
+    var b = U.bloque(gid); if (!b) return;
+    var rol = b.slots[i];
+    if (U.ROLES_TAREA.indexOf(rol) >= 0) conTarea[a.m] = true;
+    if (b.tipo === 'escuadra') enEscuadra[a.m] = true;
+  });
+  var orden = { 'Activo': 0, 'Tibio': 1, 'Inactivo': 2 };
+  return U.state.miembros.filter(function (m) {
+    if (conTarea[m.id] || enEscuadra[m.id]) return false;
+    if (m.estado === 'Inactivo') return false;
+    return !m.unidad || m.unidad === 'Infantería' || m.unidad === 'Oficiales' || m.unidad === 'Reservas';
+  }).sort(function (a, b) { return (orden[a.estado] || 9) - (orden[b.estado] || 9); });
+};
+
+/* Rellena un solo bloque. Guarda cómo estaba para poder volver atrás
+   con el mismo botón. */
+U._antesDeRellenar = {};
+U.bloqueRellenado = function (gid) { return !!U._antesDeRellenar[gid]; };
+U.rellenarBloque = function (gid) {
+  var p = U.partida(), b = U.bloque(gid);
+  if (!p || !b) return 0;
+
+  if (U._antesDeRellenar[gid]) {            // segundo toque: deshacer
+    var antes = U._antesDeRellenar[gid];
+    delete U._antesDeRellenar[gid];
+    Object.keys(p.asignaciones).forEach(function (k) {
+      if (k.split(':')[0] === gid) delete p.asignaciones[k];
+    });
+    Object.keys(antes).forEach(function (k) { p.asignaciones[k] = antes[k]; });
+    U.save(); U.emit('roster');
+    return -1;
+  }
+
+  var copia = {};
+  Object.keys(p.asignaciones).forEach(function (k) {
+    if (k.split(':')[0] === gid) copia[k] = JSON.parse(JSON.stringify(p.asignaciones[k]));
+  });
+
+  var libres = U.disponibles(), n = 0;
+  b.slots.forEach(function (rol, i) {
+    if (U.ROLES_RELLENO.indexOf(rol) < 0) return;
+    if (p.asignaciones[gid + ':' + i]) return;
+    var m = libres.shift(); if (!m) return;
+    p.asignaciones[gid + ':' + i] = { m: m.id, est: '' };
+    n++;
+  });
+  if (n) U._antesDeRellenar[gid] = copia;
+  U.save(); U.emit('roster');
+  return n;
+};
+
 U.rellenar = function () {
   var p = U.partida(); if (!p) return 0;
   var conTarea = {}, enEscuadra = {};

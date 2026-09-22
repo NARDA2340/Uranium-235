@@ -20,12 +20,24 @@ U.roster = (function () {
 
     cont.appendChild(cabecera(p));
 
-    var grilla = U.el('div', { class: 'r-grilla' });
-    U.bloques().forEach(function (b, i) { grilla.appendChild(bloque(b, i)); });
+    var grilla = U.el('div', { class: 'r-grilla', id: 'r-grilla' });
+    U.bloques().forEach(function (b) { grilla.appendChild(bloque(b)); });
     grilla.appendChild(U.el('button', {
       class: 'r-bloque nuevo', html: '＋<span>Agregar bloque</span>',
       onclick: function () { U.agregarBloque(); render(); }
     }));
+    /* mientras arrastrás, las tarjetas se corren solas */
+    grilla.addEventListener('dragover', function (e) {
+      if (!arrastrandoBloque) return;
+      e.preventDefault();
+      var origen = grilla.querySelector('[data-bid="' + arrastrandoBloque + '"]');
+      var destino = e.target.closest ? e.target.closest('.r-bloque[data-bid]') : null;
+      if (!origen || !destino || destino === origen) return;
+      var r = destino.getBoundingClientRect();
+      var despues = (e.clientY - r.top) > r.height / 2 || (e.clientX - r.left) > r.width / 2;
+      grilla.insertBefore(origen, despues ? destino.nextSibling : destino);
+    });
+    grilla.addEventListener('drop', function (e) { if (arrastrandoBloque) e.preventDefault(); });
     cont.appendChild(grilla);
 
     cont.appendChild(pie(p));
@@ -50,41 +62,27 @@ U.roster = (function () {
         function () { U.cambiarFormato(v); render(); U.toast('Roster armado para ' + v); });
     }, { opciones: U.FORMATOS }));
 
-    var acc = U.el('div', { class: 'r-head-acc' }, [
-      U.el('button', {
-        class: 'btn primary', text: '⚡ Rellenar infantería',
-        title: 'Completa los puestos de infantería vacíos con la gente disponible. No toca ingenieros ni choferes.',
-        onclick: function () {
-          var n = U.rellenar();
-          render();
-          U.toast(n ? n + ' puestos completados' : 'No quedó gente libre para rellenar', n ? '' : 'err');
-        }
-      })
-    ]);
-    box.appendChild(acc);
     return box;
   }
 
   /* ---------------- un bloque ---------------- */
-  function bloque(g, indice) {
+  function bloque(g) {
     var u = U.unit(g.unidad);
     var ocupados = g.slots.filter(function (_, i) { return U.asig(g.id, i); }).length;
-
-    var caja = U.el('div', { class: 'r-bloque t-' + g.tipo, style: { '--c': u.color } });
+    var caja = U.el('div', { class: 'r-bloque t-' + g.tipo, 'data-bid': g.id, style: { '--c': u.color } });
 
     var head = U.el('div', { class: 'r-bloque-head', draggable: 'true', title: 'Arrastrá para mover el bloque' });
-    var ttl = U.el('span', {
+    head.appendChild(U.el('span', {
       class: 'ttl', text: g.titulo, title: 'Clic para renombrar',
       onclick: function () {
         U.pedirTexto('Nombre del bloque', g.titulo, function (t) {
           if (t) { U.renombrarBloque(g.id, t); render(); }
         });
       }
-    });
-    head.appendChild(ttl);
+    }));
     head.appendChild(U.el('span', { class: 'cnt', text: ocupados + '/' + g.slots.length }));
     head.appendChild(U.el('button', {
-      class: 'mas', text: '+', title: 'Sumar un slot',
+      class: 'mas', text: '+', title: 'Sumar un puesto',
       onclick: function () { U.agregarSlot(g.id); render(); }
     }));
     head.appendChild(U.el('button', {
@@ -93,29 +91,43 @@ U.roster = (function () {
         U.confirmar('¿Borrar el bloque "' + g.titulo + '"?', function () { U.borrarBloque(g.id); render(); });
       }
     }));
+    if (g.tipo === 'escuadra') head.appendChild(U.el('button', {
+      class: 'rayo' + (U.bloqueRellenado(g.id) ? ' on' : ''), text: '⚡',
+      title: U.bloqueRellenado(g.id)
+        ? 'Volver atrás el relleno de este bloque'
+        : 'Rellenar los puestos de infantería vacíos de este bloque',
+      onclick: function () {
+        var n = U.rellenarBloque(g.id);
+        render();
+        U.toast(n < 0 ? 'Relleno deshecho' : n ? n + ' puestos completados' : 'No quedó gente libre', n ? '' : 'err');
+      }
+    }));
 
     head.addEventListener('dragstart', function (e) {
       arrastrandoBloque = g.id;
+      e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', 'bloque:' + g.id);
-      caja.classList.add('moviendo');
+      setTimeout(function () { caja.classList.add('moviendo'); }, 0);
     });
-    head.addEventListener('dragend', function () { arrastrandoBloque = null; caja.classList.remove('moviendo'); });
-    caja.addEventListener('dragover', function (e) {
-      if (!arrastrandoBloque || arrastrandoBloque === g.id) return;
-      e.preventDefault(); caja.classList.add('destino');
-    });
-    caja.addEventListener('dragleave', function () { caja.classList.remove('destino'); });
-    caja.addEventListener('drop', function (e) {
+    head.addEventListener('dragend', function () {
+      caja.classList.remove('moviendo');
       if (!arrastrandoBloque) return;
-      e.preventDefault(); e.stopPropagation();
-      caja.classList.remove('destino');
-      U.moverBloque(arrastrandoBloque, indice);
-      arrastrandoBloque = null; render();
+      arrastrandoBloque = null;
+      guardarOrden();
     });
 
     caja.appendChild(head);
     g.slots.forEach(function (rol, i) { caja.appendChild(slotRow(g, rol, i)); });
     return caja;
+  }
+
+  /* pasa el orden que quedó en pantalla al modelo */
+  function guardarOrden() {
+    var grilla = U.$('#r-grilla'); if (!grilla) return;
+    var orden = U.$$('.r-bloque[data-bid]', grilla).map(function (n) { return n.getAttribute('data-bid'); });
+    var p = U.partida();
+    p.bloques.sort(function (a, b) { return orden.indexOf(a.id) - orden.indexOf(b.id); });
+    U.save(); render();
   }
 
   /* ---------------- una fila ---------------- */
@@ -243,22 +255,24 @@ U.roster = (function () {
     ]);
     side.appendChild(head);
 
+    var fila = U.el('div', { class: 'sb-buscar' });
     var buscar = U.el('input', { class: 'inp', placeholder: 'Buscar…', value: filtro.q });
     buscar.addEventListener('input', function () { filtro.q = buscar.value; pintarLista(); });
-    side.appendChild(buscar);
+    fila.appendChild(buscar);
 
-    var chips = U.el('div', { class: 'sb-chips' });
-    ['Todos'].concat(U.UNIDADES_MIEMBRO).forEach(function (u) {
-      chips.appendChild(U.el('button', {
-        class: 'chip' + (filtro.unidad === u ? ' on' : ''), text: u,
-        onclick: function () { filtro.unidad = u; pintarSidebar(); }
-      }));
+    var sel = U.el('select', { class: 'inp filtro', title: 'Filtrar la base de jugadores' });
+    ['Todos'].concat(U.UNIDADES_MIEMBRO).concat(['— Sin asignar —']).forEach(function (u) {
+      var valor = u === '— Sin asignar —' ? '__libres' : u;
+      var puesto = filtro.soloLibres ? '__libres' : filtro.unidad;
+      sel.appendChild(U.el('option', { value: valor, text: u, selected: valor === puesto ? 'selected' : null }));
     });
-    chips.appendChild(U.el('button', {
-      class: 'chip' + (filtro.soloLibres ? ' on' : ''), text: 'Sin asignar',
-      onclick: function () { filtro.soloLibres = !filtro.soloLibres; pintarSidebar(); }
-    }));
-    side.appendChild(chips);
+    sel.addEventListener('change', function () {
+      if (sel.value === '__libres') { filtro.soloLibres = true; filtro.unidad = 'Todos'; }
+      else { filtro.soloLibres = false; filtro.unidad = sel.value; }
+      pintarLista();
+    });
+    fila.appendChild(sel);
+    side.appendChild(fila);
 
     side.appendChild(U.el('div', { class: 'sb-list', id: 'sb-list' }));
 

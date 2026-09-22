@@ -71,7 +71,7 @@ U.ROLES_RELLENO = ['INFANTRY', 'MACHINE GUN', 'ANTI TANK', 'ASSAULT', 'AUTO RIFL
 /* --- Plantillas de roster por formato. Son el punto de partida: una
        vez creada la partida, los bloques se copian adentro y se pueden
        renombrar, mover, agrandar o borrar sin tocar esto. --- */
-U.FORMATOS = ['x25', 'x36', 'x49'];
+U.FORMATOS = ['x18', 'x25', 'x36', 'x49'];
 
 function nodos() {
   return [
@@ -107,6 +107,17 @@ var ARTILLERIA = { id: 'arty', titulo: 'ARTILLERÍA', unidad: 'arty', tipo: 'man
 var WAMO = { id: 'wamo', titulo: 'INCURSOR (WAMO)', unidad: 'wamo', tipo: 'mando', slots: ['SL', 'EXPLOSIVE', 'SUPPLY BOX'] };
 
 U.PLANTILLAS = {
+  /* 18 · tres oficiales y nada más: sin nodos ni tanques, solo camiones */
+  x18: function () {
+    return [
+      { id: 'trucks', titulo: 'TRUCKS', unidad: 'free', tipo: 'tarea',
+        slots: ['RED TRUCK (IZQ|NORTE)', 'GREEN TRUCK (CENTRO)', 'BLUE TRUCK (DER|SUR)'] },
+      escuadra('sq_red', 'NORTE | ROJO', 'red', 1, 4, 'MACHINE GUN'),
+      escuadra('sq_green', 'CENTRO | VERDE', 'green', 1, 4, 'MACHINE GUN'),
+      escuadra('sq_blue', 'SUR | AZUL', 'blue', 1, 4, 'MACHINE GUN'),
+      COMANDO
+    ];
+  },
   /* 25 · sin ariete ni incursor; la defensa ocupa el cuarto lugar */
   x25: function () {
     return nodos().concat([
@@ -186,7 +197,7 @@ U.MAPA_GRID = '../media/maps/grid.webp';
 U.map = function (id) { return U.MAPS.find(m => m.id === id) || U.MAPS[0]; };
 
 U.BANDOS = ['Aliados', 'Eje', 'US', 'Wehrmacht', 'British', 'Soviético', 'DAK'];
-U.MODOS  = ['x25', 'x36', 'x49'];
+U.MODOS  = ['x18', 'x25', 'x36', 'x49'];
 /* Estado del jugador: tres, con semáforo.
    Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más */
 U.ESTADOS = ['Activo', 'Tibio', 'Inactivo'];
