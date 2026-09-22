@@ -205,7 +205,7 @@ U.sketch = (function () {
         text: corto(g),
         onclick: function () {
           grupoActivo = g.id;
-          if (sel) { snapshot(); sel.grupo = g.id; delete sel.color; U.save(); }
+          if (sel) { snapshot(); sel.grupo = g.id; delete sel.color; renumerar(); U.save(); }
           pintarTools(); render();
         }
       }));
@@ -232,18 +232,27 @@ U.sketch = (function () {
 
     /* --- íconos, plegable --- */
     toolbar.appendChild(plegable('Íconos', 'iconos', function (caja) {
-      var gi = U.el('div', { class: 'sk-iconos' });
-      U.ICONS.forEach(function (ic) {
-        var b = U.el('button', {
-          class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : ''), title: ic.nombre,
-          onclick: function () { iconoActivo = ic.id; tool = 'icon'; pintarTools(); }
+      var grupos = {};
+      U.ICONS.forEach(function (ic) { (grupos[ic.grupo] = grupos[ic.grupo] || []).push(ic); });
+      Object.keys(grupos).forEach(function (gr) {
+        caja.appendChild(U.el('span', { class: 'sk-ico-t', text: gr }));
+        var gi = U.el('div', { class: 'sk-iconos' });
+        grupos[gr].forEach(function (ic) {
+          var b = U.el('button', {
+            class: 'sk-ico' + (iconoActivo === ic.id ? ' on' : ''), title: ic.nombre,
+            onclick: function () { iconoActivo = ic.id; tool = 'icon'; pintarTools(); }
+          });
+          if (ic.img) {
+            b.appendChild(U.el('img', { src: U.ICONO_BASE + ic.img + '.png', alt: ic.nombre }));
+          } else {
+            var sv = ns('svg', { viewBox: '-24 -24 48 48' });
+            sv.innerHTML = iconSVG(ic.id, colorActual());
+            b.appendChild(sv);
+          }
+          gi.appendChild(b);
         });
-        var s = ns('svg', { viewBox: '-24 -24 48 48' });
-        s.innerHTML = iconSVG(ic.id, colorActual());
-        b.appendChild(s);
-        gi.appendChild(b);
+        caja.appendChild(gi);
       });
-      caja.appendChild(gi);
     }));
 
     /* --- mapa, plegable --- */
@@ -267,7 +276,6 @@ U.sketch = (function () {
           onclick: function () { cps[c[0]] = !cps[c[0]]; U.save(); cargarMapa(); pintarTools(); }
         }));
       });
-      caja.appendChild(U.el('button', { class: 'btn sm', text: 'Subir otra imagen', onclick: subirMapa }));
       caja.appendChild(U.el('p', { class: 'sk-credito', html: 'Texturas del juego + capas de <b>Maps Let Loose</b>.' }));
     }));
 
@@ -278,7 +286,6 @@ U.sketch = (function () {
       title: 'Subir una foto y pinearla en el mapa (también podés arrastrarla o pegarla con Ctrl+V)',
       onclick: pedirCaptura
     }));
-    fin.appendChild(U.el('button', { class: 'btn sm primary', text: '▶ Presentar', onclick: presentar }));
     fin.appendChild(U.el('button', {
       class: 'btn sm ghost', text: 'Limpiar slide', onclick: function () {
         U.confirmar('¿Borrar todo lo dibujado en esta slide?', function () {
@@ -289,25 +296,21 @@ U.sketch = (function () {
     toolbar.appendChild(fin);
   }
 
+  /* nombre corto para la muestra de color y la leyenda */
   function corto(g) {
-    return g.titulo
-      .replace(/ ·.*/, '')
-      .replace('TANQUE ', 'T')
+    return String(g.titulo || '')
+      .split('|')[0]
+      .split('·')[0]
       .replace('INCURSOR (WAMO)', 'WAMO')
       .replace('ARTILLERÍA', 'ARTY')
       .replace('COMMANDER', 'CMD')
-      .replace('RED | ROJO', 'NORTE')
-      .replace('GREEN | VERDE', 'CENTRO')
-      .replace('BLUE | AZUL', 'SUR')
-      .replace('ALFA | ARIETE', 'FLEX')
-      .replace('DEFENSE', 'DEF')
-      .replace('RECON ', 'REC ');
+      .replace('TANQUE ', 'T')
+      .replace('RECON ', 'REC ')
+      .trim();
   }
+
   function gruposDibujables() {
-    return U.ROSTER.filter(function (g) {
-      return g.tipo === 'escuadra' || g.tipo === 'tanque' ||
-        ['commander', 'recon1', 'recon2', 'arty', 'wamo'].indexOf(g.id) >= 0;
-    });
+    return U.bloques().filter(function (g) { return g.tipo !== 'tarea'; });
   }
 
   function plegable(titulo, clave, armar) {
@@ -515,7 +518,11 @@ U.sketch = (function () {
       if (r > 10) nuevo({ tipo: 'circle', x: d.a.x, y: d.a.y, r: r });
       dibujando = null;
     } else if (d.modo === 'mover') {
-      if (d.movido) U.save(); else { (historia[slide().id] || []).pop(); }
+      if (d.movido) U.save();
+      else {
+        (historia[slide().id] || []).pop();
+        if (d.o.tipo === 'pin') abrirPin(d.o);      // clic simple = verla grande
+      }
       dibujando = null;
     }
     U.vaciar(gTmp);
@@ -543,15 +550,33 @@ U.sketch = (function () {
     var o = Object.assign({ id: U.uid('o'), grosor: grosor }, base);
     if (grupoActivo === '__libre') o.color = colorLibre; else o.grupo = grupoActivo;
     objs().push(o);
-    sel = o;
+    renumerar();
+    // los íconos se siguen estampando: no quedan seleccionados
+    sel = (o.tipo === 'icon') ? null : o;
     if (tool !== 'icon' && tool !== 'pen') tool = 'sel';
     U.save(); pintarTools(); render();
+  }
+
+  /* 1 SL = 1 OP: cada grupo numera sus OPs 1, 2, 3… en el orden que se
+     pusieron. Si se borra o se cambia de grupo, se renumeran solos. */
+  function renumerar() {
+    var cuenta = {};
+    objs().forEach(function (o) {
+      if (o.tipo !== 'icon') return;
+      var ic = U.icono(o.icono);
+      if (!ic || !ic.numerado) return;
+      if (!o.grupo) { delete o.num; return; }
+      var k = o.icono + '|' + o.grupo;
+      cuenta[k] = (cuenta[k] || 0) + 1;
+      o.num = cuenta[k];
+    });
   }
 
   function borrar(o) {
     snapshot();
     var i = objs().indexOf(o);
     if (i >= 0) objs().splice(i, 1);
+    renumerar();
     sel = null; U.save(); render();
   }
 
@@ -649,7 +674,27 @@ U.sketch = (function () {
     } else if (o.tipo === 'icon') {
       var k = (o.escala || 1) * (NAT.w / 1100);
       var gi = ns('g', { transform: 'translate(' + o.x + ',' + o.y + ') scale(' + k + ')' });
-      gi.innerHTML = iconSVG(o.icono, c);
+      var ic = U.icono(o.icono);
+      if (ic && ic.img) {
+        // disco del color del grupo detrás del ícono del juego
+        gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: '#0b0a06', 'fill-opacity': .55 }));
+        gi.appendChild(ns('circle', { cx: 0, cy: 0, r: 25, fill: c, 'fill-opacity': .3, stroke: c, 'stroke-width': 3 }));
+        var iim = ns('image', { x: -21, y: -21, width: 42, height: 42, preserveAspectRatio: 'xMidYMid meet' });
+        iim.setAttributeNS('http://www.w3.org/1999/xlink', 'href', U.ICONO_BASE + ic.img + '.png');
+        iim.setAttributeNS(null, 'href', U.ICONO_BASE + ic.img + '.png');
+        gi.appendChild(iim);
+        if (o.num) {
+          gi.appendChild(ns('circle', { cx: 19, cy: -19, r: 13, fill: c, stroke: '#0b0a06', 'stroke-width': 2.5 }));
+          var tn = ns('text', {
+            x: 19, y: -14, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 700,
+            'font-family': 'Space Mono, monospace', fill: '#0b0a06'
+          });
+          tn.textContent = o.num;
+          gi.appendChild(tn);
+        }
+      } else {
+        gi.innerHTML = iconSVG(o.icono, c);
+      }
       wrap.appendChild(gi);
       if (o.etiqueta) {
         var te = ns('text', { x: o.x, y: o.y + 46 * k, fill: c, 'font-size': 22 * k, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace', stroke: '#0b0a06', 'stroke-width': 3 * k, 'paint-order': 'stroke' });
@@ -657,23 +702,30 @@ U.sketch = (function () {
         wrap.appendChild(te);
       }
     } else if (o.tipo === 'pin') {
-      var kk = NAT.w / 1100, W = 150 * kk, H = 96 * kk;
-      var gp = ns('g', { transform: 'translate(' + o.x + ',' + o.y + ')' });
-      gp.appendChild(ns('path', { d: 'M0,0 L' + (-10 * kk) + ',' + (-18 * kk) + ' L' + (10 * kk) + ',' + (-18 * kk) + ' Z', fill: c }));
-      gp.appendChild(ns('rect', { x: -W / 2, y: -H - 18 * kk, width: W, height: H, fill: '#0b0a06', stroke: c, 'stroke-width': 4 * kk, rx: 3 }));
-      var im = ns('image', { x: -W / 2 + 3 * kk, y: -H - 15 * kk, width: W - 6 * kk, height: H - 6 * kk, preserveAspectRatio: 'xMidYMid slice' });
-      var url = shotsCache[o.shotId];
-      if (url) im.setAttribute('href', url);
-      else U.shots.get(o.shotId).then(function (u) {
-        if (u) { shotsCache[o.shotId] = u; im.setAttribute('href', u); }
+      // chinche chica: no tapa el mapa. Un clic la abre en grande.
+      var kk = (o.escala || 1) * (NAT.w / 1100), R = 22;
+      var n = objs().filter(function (x) { return x.tipo === 'pin'; }).indexOf(o) + 1;
+      var gp = ns('g', { transform: 'translate(' + o.x + ',' + o.y + ') scale(' + kk + ')', class: 'pin' });
+      gp.appendChild(ns('path', { d: 'M0,4 L-9,-10 L9,-10 Z', fill: c, stroke: '#0b0a06', 'stroke-width': 2 }));
+      gp.appendChild(ns('circle', { cx: 0, cy: -30, r: R, fill: '#0b0a06', stroke: c, 'stroke-width': 4 }));
+      // glifo de foto
+      gp.appendChild(ns('rect', { x: -11, y: -39, width: 22, height: 17, rx: 2.5, fill: 'none', stroke: c, 'stroke-width': 2.6 }));
+      gp.appendChild(ns('circle', { cx: 0, cy: -30, r: 4.6, fill: c }));
+      gp.appendChild(ns('rect', { x: -4, y: -42, width: 8, height: 3.4, rx: 1, fill: c }));
+      var tnum = ns('text', {
+        x: 0, y: -55, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700,
+        'font-family': 'Space Mono, monospace', fill: c, stroke: '#0b0a06', 'stroke-width': 3, 'paint-order': 'stroke'
       });
-      gp.appendChild(im);
+      tnum.textContent = n;
+      gp.appendChild(tnum);
       if (o.etiqueta) {
-        var tl = ns('text', { x: 0, y: 24 * kk, fill: c, 'font-size': 20 * kk, 'text-anchor': 'middle', 'font-family': 'Space Mono, monospace', stroke: '#0b0a06', 'stroke-width': 4 * kk, 'paint-order': 'stroke' });
+        var tl = ns('text', {
+          x: 0, y: 22, fill: c, 'font-size': 15, 'text-anchor': 'middle',
+          'font-family': 'Space Mono, monospace', stroke: '#0b0a06', 'stroke-width': 3.5, 'paint-order': 'stroke'
+        });
         tl.textContent = o.etiqueta;
         gp.appendChild(tl);
       }
-      gp.addEventListener('dblclick', function () { abrirPin(o); });
       wrap.appendChild(gp);
     }
     if (!sinSel && sel === o) wrap.appendChild(marco(o));
@@ -725,7 +777,7 @@ U.sketch = (function () {
       })
     ]));
 
-    var grupos = U.ROSTER.filter(function (g) {
+    var grupos = U.bloques().filter(function (g) {
       return verTodos ? U.plantel(g.id).length : usados[g.id];
     });
     if (!grupos.length) {
@@ -745,8 +797,11 @@ U.sketch = (function () {
       pl.forEach(function (j) {
         ul.appendChild(U.el('span', {
           class: 'j' + (/SL|COMMANDER|CAP/.test(j.rol) ? ' lider' : '') + (j.est === 'ok' ? ' ok' : j.est === 'falta' ? ' falta' : ''),
-          title: j.rol, html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre
-        }));
+          title: j.rol
+        }, [
+          U.el('img', { class: 'cls', src: U.rolIcono(j.rol), alt: '' }),
+          U.el('span', { text: j.nombre })
+        ]));
       });
       caja.appendChild(ul);
       leyenda.appendChild(caja);
@@ -814,6 +869,9 @@ U.sketch = (function () {
         s.slides.splice(s.activa + 1, 0, c); s.activa++; U.save(); render();
       }
     }));
+    slidesBar.appendChild(U.el('button', {
+      class: 'sk-play', html: '▶', title: 'Presentar para el briefing', onclick: presentar
+    }));
     if (s.slides.length > 1) slidesBar.appendChild(U.el('button', {
       class: 'sk-slide add del', text: '✕', title: 'Borrar slide',
       onclick: function () {
@@ -858,13 +916,16 @@ U.sketch = (function () {
 
       var usados = {};
       sl.objs.forEach(function (o) { if (o.grupo) usados[o.grupo] = true; });
-      U.ROSTER.filter(function (g) { return usados[g.id]; }).forEach(function (g) {
+      U.bloques().filter(function (g) { return usados[g.id]; }).forEach(function (g) {
         var u = U.unit(g.unidad), pl = U.plantel(g.id);
         var c = U.el('div', { class: 'p-grupo', style: { '--c': u.color } });
         c.appendChild(U.el('h4', { html: '<i></i>' + corto(g) }));
         var l = U.el('div', { class: 'p-jug' });
         pl.forEach(function (j) {
-          l.appendChild(U.el('span', { class: /SL|COMMANDER|CAP/.test(j.rol) ? 'lider' : '', html: '<i>' + U.roleIco(j.rol) + '</i>' + j.nombre }));
+          l.appendChild(U.el('span', { class: /SL|COMMANDER|CAP/.test(j.rol) ? 'lider' : '' }, [
+            U.el('img', { class: 'cls', src: U.rolIcono(j.rol), alt: '' }),
+            U.el('span', { text: j.nombre })
+          ]));
         });
         if (!pl.length) l.appendChild(U.el('span', { class: 'vacio', text: '—' }));
         c.appendChild(l); ley.appendChild(c);
@@ -875,7 +936,7 @@ U.sketch = (function () {
         pc.appendChild(U.el('h4', { html: '<i></i>CAPTURAS' }));
         var pl2 = U.el('div', { class: 'p-jug' });
         pins.forEach(function (o, n) {
-          pl2.appendChild(U.el('span', { html: '<i>▣</i>' + (o.etiqueta || ('pin ' + (n + 1))), onclick: function () { abrirPin(o); } }));
+          pl2.appendChild(U.el('span', { text: '▣ ' + (o.etiqueta || ('pin ' + (n + 1))), onclick: function () { abrirPin(o); } }));
         });
         pc.appendChild(pl2); ley.appendChild(pc);
       }

@@ -11,7 +11,8 @@ U.KEY = 'u235.panel.v1';
 U.uid = function (p) { return (p || 'x') + Math.random().toString(36).slice(2, 9); };
 
 /* ---------- partida vacía ---------- */
-U.nuevaPartida = function (nombre) {
+U.nuevaPartida = function (nombre, formato) {
+  formato = formato || 'x36';
   return {
     id: U.uid('p'),
     nombre: nombre || 'Partida sin nombre',
@@ -19,7 +20,9 @@ U.nuevaPartida = function (nombre) {
     mapa: 'carentan',
     bando: 'Aliados',
     punto: '',
-    modo: 'Warfare',
+    modo: formato,
+    formato: formato,
+    bloques: U.plantilla(formato),   // la estructura vive acá: se edita por partida
     server: { name: '', pass: '' },
     briefing: '',
     resultado: '',
@@ -99,7 +102,19 @@ U.migrar = function () {
       p.strat.espacio = 1920;
     }
     if (!p.strat.slides.length) p.strat.slides.push({ id: U.uid('s'), nombre: 'Apertura', objs: [] });
-    if (!p.extraSlots) p.extraSlots = {};
+    // la plantilla global pasó a ser parte de cada partida
+    if (!p.bloques) {
+      if (U.FORMATOS.indexOf(p.modo) < 0) p.modo = 'x49';
+      p.formato = p.formato || p.modo;
+      p.bloques = U.plantilla(p.formato);
+      var ex = p.extraSlots || {};
+      Object.keys(ex).forEach(function (gid) {
+        var b = p.bloques.find(function (x) { return x.id === gid; });
+        if (b) b.slots = b.slots.concat(ex[gid]);
+      });
+    }
+    if (!p.formato) p.formato = U.FORMATOS.indexOf(p.modo) >= 0 ? p.modo : 'x49';
+    delete p.extraSlots;
     if (!p.reservas) p.reservas = [];
     // la asistencia pasó de booleano (vino sí/no) a tres estados
     Object.keys(p.asignaciones).forEach(function (k) {
@@ -182,11 +197,123 @@ U.nombreMiembro = function (id) {
   var m = U.miembro(id); return m ? m.nombre : '';
 };
 
-/* slots efectivos de un grupo (plantilla + agregados de esta partida) */
-U.slotsDe = function (gid) {
-  var g = U.group(gid), p = U.partida();
-  if (!g) return [];
-  return g.slots.concat((p && p.extraSlots[gid]) || []);
+/* ---------- bloques del roster (viven dentro de la partida) ---------- */
+U.bloques = function () { var p = U.partida(); return (p && p.bloques) || []; };
+U.bloque = function (id) { return U.bloques().find(function (b) { return b.id === id; }); };
+U.group = U.bloque;                       // alias histórico
+U.slotsDe = function (gid) { var b = U.bloque(gid); return b ? b.slots : []; };
+
+/* renombrar */
+U.renombrarBloque = function (id, titulo) {
+  var b = U.bloque(id); if (!b || !titulo) return;
+  b.titulo = titulo; U.save(); U.emit('roster');
+};
+
+/* mover un bloque a otra posición de la grilla */
+U.moverBloque = function (id, destino) {
+  var bs = U.bloques();
+  var i = bs.findIndex(function (b) { return b.id === id; });
+  if (i < 0) return;
+  var b = bs.splice(i, 1)[0];
+  bs.splice(Math.max(0, Math.min(destino, bs.length)), 0, b);
+  U.save(); U.emit('roster');
+};
+
+/* agregar / quitar / cambiar slots, corrigiendo las asignaciones */
+U.agregarSlot = function (gid, rol) {
+  var b = U.bloque(gid); if (!b) return;
+  b.slots.push(rol || b.extra || 'INFANTRY');
+  U.save(); U.emit('roster');
+};
+U.quitarSlot = function (gid, i) {
+  var b = U.bloque(gid), p = U.partida(); if (!b) return;
+  b.slots.splice(i, 1);
+  // las claves son "bloque:indice": hay que correrlas una posición
+  var nuevas = {};
+  Object.keys(p.asignaciones).forEach(function (k) {
+    var parte = k.split(':');
+    if (parte[0] !== gid) { nuevas[k] = p.asignaciones[k]; return; }
+    var idx = +parte[1];
+    if (idx === i) return;                 // el que se borró
+    nuevas[gid + ':' + (idx > i ? idx - 1 : idx)] = p.asignaciones[k];
+  });
+  p.asignaciones = nuevas;
+  U.save(); U.emit('roster');
+};
+U.cambiarRol = function (gid, i, rol) {
+  var b = U.bloque(gid); if (!b) return;
+  b.slots[i] = rol; U.save(); U.emit('roster');
+};
+U.borrarBloque = function (id) {
+  var p = U.partida();
+  p.bloques = p.bloques.filter(function (b) { return b.id !== id; });
+  Object.keys(p.asignaciones).forEach(function (k) {
+    if (k.split(':')[0] === id) delete p.asignaciones[k];
+  });
+  U.save(); U.emit('roster');
+};
+U.agregarBloque = function (base) {
+  var p = U.partida();
+  var b = Object.assign({
+    id: U.uid('b'), titulo: 'NUEVO BLOQUE', unidad: 'free', tipo: 'escuadra',
+    extra: 'INFANTRY', slots: ['SL', 'INFANTRY', 'INFANTRY']
+  }, base || {});
+  p.bloques.push(b);
+  U.save(); U.emit('roster');
+  return b;
+};
+
+/* cambiar el formato: vuelve a la plantilla, conservando lo que encaje */
+U.cambiarFormato = function (formato) {
+  var p = U.partida(); if (!p) return;
+  p.formato = formato; p.modo = formato;
+  p.bloques = U.plantilla(formato);
+  // se conservan solo las asignaciones que siguen teniendo slot
+  var nuevas = {};
+  Object.keys(p.asignaciones).forEach(function (k) {
+    var parte = k.split(':'), b = U.bloque(parte[0]);
+    if (b && b.slots[+parte[1]]) nuevas[k] = p.asignaciones[k];
+  });
+  p.asignaciones = nuevas;
+  U.save(); U.emit('roster'); U.emit('todo');
+};
+
+/* ---------- rellenar la infantería que falta ----------
+   No toca a los que ya tienen tarea de apertura (ingenieros y choferes)
+   ni repite gente que ya está en otra escuadra. Las cajas de supply sí
+   pueden estar en los dos lados. */
+U.rellenar = function () {
+  var p = U.partida(); if (!p) return 0;
+  var conTarea = {}, enEscuadra = {};
+  Object.keys(p.asignaciones).forEach(function (k) {
+    var a = p.asignaciones[k]; if (!a || !a.m) return;
+    var gid = k.split(':')[0], i = +k.split(':')[1];
+    var b = U.bloque(gid); if (!b) return;
+    var rol = b.slots[i];
+    if (U.ROLES_TAREA.indexOf(rol) >= 0) conTarea[a.m] = true;
+    if (b.tipo === 'escuadra') enEscuadra[a.m] = true;
+  });
+
+  var orden = { 'Activo': 0, 'Tibio': 1, 'Inactivo': 2 };
+  var candidatos = U.state.miembros.filter(function (m) {
+    if (conTarea[m.id] || enEscuadra[m.id]) return false;
+    if (m.estado === 'Inactivo') return false;
+    return !m.unidad || m.unidad === 'Infantería' || m.unidad === 'Oficiales' || m.unidad === 'Reservas';
+  }).sort(function (a, b) { return (orden[a.estado] || 9) - (orden[b.estado] || 9); });
+
+  var n = 0;
+  U.bloques().forEach(function (b) {
+    if (b.tipo !== 'escuadra') return;
+    b.slots.forEach(function (rol, i) {
+      if (U.ROLES_RELLENO.indexOf(rol) < 0) return;
+      if (p.asignaciones[b.id + ':' + i]) return;
+      var m = candidatos.shift(); if (!m) return;
+      p.asignaciones[b.id + ':' + i] = { m: m.id, est: '' };
+      n++;
+    });
+  });
+  U.save(); U.emit('roster');
+  return n;
 };
 
 /* asignación de un slot */

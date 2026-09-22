@@ -48,7 +48,7 @@ U.dash = (function () {
   }
 
   function coberturaBloques() {
-    return U.ROSTER.map(function (g) {
+    return U.bloques().map(function (g) {
       var slots = U.slotsDe(g.id);
       var ocup = slots.filter(function (_, i) { return U.asig(g.id, i); }).length;
       return { g: g, ocup: ocup, total: slots.length, color: U.unit(g.unidad).color };
@@ -92,7 +92,7 @@ U.dash = (function () {
     ]));
     var fg = U.el('div', { class: 'ficha-grid' });
     [['Partida', p.nombre], ['Mapa', mapa.nombre], ['Punto', p.punto || '—'], ['Bando', p.bando],
-     ['Modo', p.modo], ['Server', p.server.name || '—'], ['Pass', p.server.pass || '—'],
+     ['Formato', p.formato || p.modo], ['Server', p.server.name || '—'], ['Pass', p.server.pass || '—'],
      ['Briefing', p.briefing || '—'], ['Resultado', p.resultado || '—']]
       .forEach(function (r) {
         fg.appendChild(U.el('div', { class: 'ficha-i' }, [U.el('span', { text: r[0] }), U.el('b', { text: r[1] })]));

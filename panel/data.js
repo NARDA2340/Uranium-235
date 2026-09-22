@@ -22,82 +22,131 @@ U.UNITS = [
 ];
 U.unit = function (id) { return U.UNITS.find(u => u.id === id) || U.UNITS[U.UNITS.length - 1]; };
 
-/* --- Roles: mismo vocabulario que la hoja "Datos" del dashboard --- */
-U.ROLES = {
-  'COMMANDER':     { ico: '👑', tipo: 'mando' },
-  'LOGISTIC':      { ico: '🛠️', tipo: 'mando' },
-  'SL':            { ico: '🎖️', tipo: 'mando' },
-  'SL (PUSH)':     { ico: '🎖️', tipo: 'mando' },
-  'SL (HOLD)':     { ico: '🎖️', tipo: 'mando' },
-  'INFANTRY':      { ico: '🪖', tipo: 'inf' },
-  'MACHINE GUN':   { ico: '🔫', tipo: 'inf' },
-  'ANTI TANK':     { ico: '🚀', tipo: 'inf' },
-  'ENGINEER':      { ico: '🛠️', tipo: 'inf' },
-  'SUPPLY BOX':    { ico: '📦', tipo: 'inf' },
-  'EXPLOSIVE':     { ico: '🧨', tipo: 'inf' },
-  'FLEX':          { ico: '🏓', tipo: 'inf' },
-  'RECON':         { ico: '👁️', tipo: 'recon' },
-  'SNIPER':        { ico: '🎯', tipo: 'recon' },
-  'FLARE':         { ico: '🌟', tipo: 'recon' },
-  'DEF (CENTRO)':  { ico: '🛡️', tipo: 'def' },
-  'DEF (IZQUIERDA)': { ico: '🛡️', tipo: 'def' },
-  'DEF (DERECHA)': { ico: '🛡️', tipo: 'def' },
-  'CAP':           { ico: '🎖️', tipo: 'tanque' },
-  'ART':           { ico: '🪖', tipo: 'tanque' },
-  'DRIVER':        { ico: '🪖', tipo: 'tanque' },
-  'RED TRUCK (IZQ|NORTE)':  { ico: '🛻', tipo: 'truck' },
-  'GREEN TRUCK (CENTRO)':   { ico: '🛻', tipo: 'truck' },
-  'BLUE TRUCK (DER|SUR)':   { ico: '🛻', tipo: 'truck' },
-  'SUPPLY TRUCK':           { ico: '🚚', tipo: 'truck' },
-  'RESERVA':       { ico: '🕗', tipo: 'inf' }
+/* --- Roles y su clase en el juego. El ícono es el del propio HLL
+       (assets sacados del juego, vía Maps Let Loose). --- */
+U.CLASES = {
+  'COMMANDER': 'class-commander',
+  'LOGISTIC': 'class-support',
+  'SL': 'class-officer',
+  'SL (PUSH)': 'class-officer',
+  'SL (HOLD)': 'class-officer',
+  'INFANTRY': 'class-rifleman',
+  'RIFLEMAN': 'class-rifleman',
+  'ASSAULT': 'class-assault',
+  'AUTO RIFLEMAN': 'class-auto-rifleman',
+  'MEDIC': 'class-medic',
+  'MACHINE GUN': 'class-machine-gunner',
+  'ANTI TANK': 'class-anti-tank',
+  'ENGINEER': 'class-engineer',
+  'SUPPLY BOX': 'class-support',
+  'SUPPORT': 'class-support',
+  'EXPLOSIVE': 'class-assault',
+  'FLEX': 'class-rifleman',
+  'RECON': 'class-spotter',
+  'FLARE': 'class-spotter',
+  'SNIPER': 'class-sniper',
+  'DEF (CENTRO)': 'class-rifleman',
+  'DEF (IZQUIERDA)': 'class-rifleman',
+  'DEF (DERECHA)': 'class-rifleman',
+  'CAP': 'class-officer',
+  'ART': 'tank-med',
+  'DRIVER': 'tank-med',
+  'RED TRUCK (IZQ|NORTE)': 'truck-transport',
+  'GREEN TRUCK (CENTRO)': 'truck-transport',
+  'BLUE TRUCK (DER|SUR)': 'truck-transport',
+  'SUPPLY TRUCK': 'truck-supply',
+  'RESERVA': 'class-rifleman'
 };
-U.roleIco = function (r) { return (U.ROLES[r] || {}).ico || '·'; };
+U.ICONO_BASE = '../media/iconos/';
+U.rolIcono = function (rol) { return U.ICONO_BASE + (U.CLASES[rol] || 'class-rifleman') + '.png'; };
 
-/* --- Plantilla del roster: misma estructura que la hoja de cálculo.
-       fila = bloque de la grilla (4 columnas), extra = permite sumar slots --- */
-U.ROSTER = [
-  { id: 'node1', titulo: 'NODE #1 · IZQUIERDA | NORTE', unidad: 'red',   fila: 1, tipo: 'tarea',
-    slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
-  { id: 'node2', titulo: 'NODE #2 · CENTRO', unidad: 'green', fila: 1, tipo: 'tarea',
-    slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
-  { id: 'node3', titulo: 'NODE #3 · DERECHO | SUR', unidad: 'blue', fila: 1, tipo: 'tarea',
-    slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
-  { id: 'trucks', titulo: 'TRUCKS', unidad: 'free', fila: 1, tipo: 'tarea',
-    slots: ['RED TRUCK (IZQ|NORTE)', 'GREEN TRUCK (CENTRO)', 'BLUE TRUCK (DER|SUR)', 'SUPPLY TRUCK'] },
+/* roles que puede tomar un slot cuando se edita a mano */
+U.ROLES_EDITABLES = Object.keys(U.CLASES);
 
-  { id: 'sq_red', titulo: 'RED | ROJO', unidad: 'red', fila: 2, tipo: 'escuadra', extra: 'INFANTRY',
-    slots: ['SL', 'SL', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'MACHINE GUN'] },
-  { id: 'sq_green', titulo: 'GREEN | VERDE', unidad: 'green', fila: 2, tipo: 'escuadra', extra: 'INFANTRY',
-    slots: ['SL', 'SL', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'MACHINE GUN'] },
-  { id: 'sq_blue', titulo: 'BLUE | AZUL', unidad: 'blue', fila: 2, tipo: 'escuadra', extra: 'INFANTRY',
-    slots: ['SL', 'SL', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'MACHINE GUN'] },
-  { id: 'sq_alfa', titulo: 'ALFA | ARIETE', unidad: 'alfa', fila: 2, tipo: 'escuadra', extra: 'INFANTRY',
-    slots: ['SL', 'SL', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'FLEX'] },
+/* los que NO se tocan al rellenar: ya tienen una tarea de apertura */
+U.ROLES_TAREA = ['ENGINEER', 'RED TRUCK (IZQ|NORTE)', 'GREEN TRUCK (CENTRO)', 'BLUE TRUCK (DER|SUR)', 'SUPPLY TRUCK'];
+/* los que sí se completan solos */
+U.ROLES_RELLENO = ['INFANTRY', 'MACHINE GUN', 'ANTI TANK', 'ASSAULT', 'AUTO RIFLEMAN', 'MEDIC', 'FLEX', 'RIFLEMAN', 'SUPPORT'];
 
-  { id: 'commander', titulo: 'COMMANDER', unidad: 'command', fila: 3, tipo: 'mando',
-    slots: ['COMMANDER', 'LOGISTIC'] },
-  { id: 'recon1', titulo: 'RECON A', unidad: 'recon', fila: 3, tipo: 'mando',
-    slots: ['RECON', 'SNIPER'] },
-  { id: 'recon2', titulo: 'RECON B', unidad: 'recon', fila: 3, tipo: 'mando',
-    slots: ['FLARE', 'SNIPER'] },
-  { id: 'defense', titulo: 'DEFENSE', unidad: 'defense', fila: 3, tipo: 'escuadra', extra: 'INFANTRY',
-    slots: ['DEF (CENTRO)', 'DEF (IZQUIERDA)', 'DEF (DERECHA)', 'INFANTRY', 'INFANTRY', 'INFANTRY', 'INFANTRY'] },
+/* --- Plantillas de roster por formato. Son el punto de partida: una
+       vez creada la partida, los bloques se copian adentro y se pueden
+       renombrar, mover, agrandar o borrar sin tocar esto. --- */
+U.FORMATOS = ['x25', 'x36', 'x49'];
 
-  { id: 'arty', titulo: 'ARTILLERÍA', unidad: 'arty', fila: 4, tipo: 'mando',
-    slots: ['CAP', 'INFANTRY', 'INFANTRY'] },
-  { id: 'wamo', titulo: 'INCURSOR (WAMO)', unidad: 'wamo', fila: 4, tipo: 'mando',
-    slots: ['SL', 'EXPLOSIVE', 'SUPPLY BOX'] },
+function nodos() {
+  return [
+    { id: 'node1', titulo: 'NODE #1 · IZQUIERDA | NORTE', unidad: 'red', tipo: 'tarea',
+      slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
+    { id: 'node2', titulo: 'NODE #2 · CENTRO', unidad: 'green', tipo: 'tarea',
+      slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
+    { id: 'node3', titulo: 'NODE #3 · DERECHO | SUR', unidad: 'blue', tipo: 'tarea',
+      slots: ['ENGINEER', 'SUPPLY BOX', 'SUPPLY BOX', 'SUPPLY BOX'] },
+    { id: 'trucks', titulo: 'TRUCKS', unidad: 'free', tipo: 'tarea',
+      slots: ['RED TRUCK (IZQ|NORTE)', 'GREEN TRUCK (CENTRO)', 'BLUE TRUCK (DER|SUR)', 'SUPPLY TRUCK'] }
+  ];
+}
+function escuadra(id, titulo, unidad, sls, infs, ultimo) {
+  var slots = [];
+  for (var i = 0; i < sls; i++) slots.push('SL');
+  for (var j = 0; j < infs; j++) slots.push('INFANTRY');
+  if (ultimo) slots.push(ultimo);
+  return { id: id, titulo: titulo, unidad: unidad, tipo: 'escuadra', extra: 'INFANTRY', slots: slots };
+}
+function defensa(infs) {
+  var slots = ['DEF (CENTRO)', 'DEF (IZQUIERDA)', 'DEF (DERECHA)'];
+  for (var i = 0; i < infs; i++) slots.push('INFANTRY');
+  return { id: 'defense', titulo: 'DEFENSA', unidad: 'defense', tipo: 'escuadra', extra: 'INFANTRY', slots: slots };
+}
+function tanque(id, titulo) {
+  return { id: id, titulo: titulo, unidad: 'tanks', tipo: 'tanque', slots: ['CAP', 'ART', 'DRIVER'] };
+}
+var COMANDO = { id: 'commander', titulo: 'COMMANDER', unidad: 'command', tipo: 'mando', slots: ['COMMANDER', 'LOGISTIC'] };
+var RECON_A = { id: 'recon1', titulo: 'RECON A', unidad: 'recon', tipo: 'mando', slots: ['RECON', 'SNIPER'] };
+var RECON_B = { id: 'recon2', titulo: 'RECON B', unidad: 'recon', tipo: 'mando', slots: ['FLARE', 'SNIPER'] };
+var ARTILLERIA = { id: 'arty', titulo: 'ARTILLERÍA', unidad: 'arty', tipo: 'mando', slots: ['CAP', 'INFANTRY', 'INFANTRY'] };
+var WAMO = { id: 'wamo', titulo: 'INCURSOR (WAMO)', unidad: 'wamo', tipo: 'mando', slots: ['SL', 'EXPLOSIVE', 'SUPPLY BOX'] };
 
-  { id: 't1', titulo: 'TANQUE T1 · LEAD', unidad: 'tanks', fila: 5, tipo: 'tanque',
-    slots: ['CAP', 'ART', 'DRIVER'] },
-  { id: 't2', titulo: 'TANQUE T2', unidad: 'tanks', fila: 5, tipo: 'tanque',
-    slots: ['CAP', 'ART', 'DRIVER'] },
-  { id: 't3', titulo: 'TANQUE T3 · FLEX', unidad: 'tanks', fila: 5, tipo: 'tanque',
-    slots: ['CAP', 'ART', 'DRIVER'] },
-  { id: 't4', titulo: 'TANQUE T4', unidad: 'tanks', fila: 5, tipo: 'tanque',
-    slots: ['CAP', 'ART', 'DRIVER'] }
-];
-U.group = function (id) { return U.ROSTER.find(g => g.id === id); };
+U.PLANTILLAS = {
+  /* 25 · sin ariete ni incursor; la defensa ocupa el cuarto lugar */
+  x25: function () {
+    return nodos().concat([
+      escuadra('sq_red', 'NORTE | ROJO', 'red', 1, 4, 'MACHINE GUN'),
+      escuadra('sq_green', 'CENTRO | VERDE', 'green', 1, 4, 'MACHINE GUN'),
+      escuadra('sq_blue', 'SUR | AZUL', 'blue', 1, 4, 'MACHINE GUN'),
+      defensa(2),
+      COMANDO, RECON_A,
+      tanque('t1', 'TANQUE T1 · LEAD'), tanque('t2', 'TANQUE T2')
+    ]);
+  },
+  /* 36 · igual que 25 pero con más gente y recon doble */
+  x36: function () {
+    return nodos().concat([
+      escuadra('sq_red', 'NORTE | ROJO', 'red', 2, 4, 'MACHINE GUN'),
+      escuadra('sq_green', 'CENTRO | VERDE', 'green', 2, 4, 'MACHINE GUN'),
+      escuadra('sq_blue', 'SUR | AZUL', 'blue', 2, 4, 'MACHINE GUN'),
+      defensa(3),
+      COMANDO, RECON_A, RECON_B, ARTILLERIA,
+      tanque('t1', 'TANQUE T1 · LEAD'), tanque('t2', 'TANQUE T2'), tanque('t3', 'TANQUE T3')
+    ]);
+  },
+  /* 49 · el completo, con ariete e incursor */
+  x49: function () {
+    return nodos().concat([
+      escuadra('sq_red', 'NORTE | ROJO', 'red', 2, 6, 'MACHINE GUN'),
+      escuadra('sq_green', 'CENTRO | VERDE', 'green', 2, 6, 'MACHINE GUN'),
+      escuadra('sq_blue', 'SUR | AZUL', 'blue', 2, 6, 'MACHINE GUN'),
+      escuadra('sq_alfa', 'ARIETE | FLEX', 'alfa', 2, 6, 'FLEX'),
+      COMANDO, RECON_A, RECON_B, defensa(4),
+      ARTILLERIA, WAMO,
+      tanque('t1', 'TANQUE T1 · LEAD'), tanque('t2', 'TANQUE T2'),
+      tanque('t3', 'TANQUE T3 · FLEX'), tanque('t4', 'TANQUE T4')
+    ]);
+  }
+};
+U.plantilla = function (formato) {
+  var f = U.PLANTILLAS[formato] || U.PLANTILLAS.x49;
+  return JSON.parse(JSON.stringify(f()));
+};
 
 /* --- Mapas. Texturas del juego (4096) reescaladas a 2560 + capas de
        cuadrícula y puntos, todas en el espacio de 1920x1920 que usa la
@@ -137,7 +186,7 @@ U.MAPA_GRID = '../media/maps/grid.webp';
 U.map = function (id) { return U.MAPS.find(m => m.id === id) || U.MAPS[0]; };
 
 U.BANDOS = ['Aliados', 'Eje', 'US', 'Wehrmacht', 'British', 'Soviético', 'DAK'];
-U.MODOS  = ['Warfare', 'Offensive', 'Skirmish', '18v18', '36v36', '49v49'];
+U.MODOS  = ['x25', 'x36', 'x49'];
 /* Estado del jugador: tres, con semáforo.
    Activo = juega siempre · Tibio = se anota a veces · Inactivo = no está más */
 U.ESTADOS = ['Activo', 'Tibio', 'Inactivo'];
@@ -156,26 +205,59 @@ U.ASISTENCIA_SIGUIENTE = { '': 'ok', 'ok': 'falta', 'falta': '' };
 U.UNIDADES_MIEMBRO = ['Infantería', 'Oficiales', 'Tanquistas', 'Artillería', 'Recon', 'Comandante', 'Invitado', 'Reservas'];
 U.DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
-/* --- Íconos del sketch. Se dibujan como SVG puro (nada de fuentes). --- */
+/* --- Íconos del mapa. Los que existen en el juego son los assets
+       reales; los que no (L/M/R de tanques, marcas), los dibujamos. --- */
 U.ICONS = [
-  { id: 'garrison',  nombre: 'Garrison',        grupo: 'estructura' },
-  { id: 'op',        nombre: 'OP (bandera)',    grupo: 'estructura' },
-  { id: 'node',      nombre: 'Nodo',            grupo: 'estructura' },
-  { id: 'supply',    nombre: 'Supplies',        grupo: 'estructura' },
-  { id: 'truck',     nombre: 'Camión',          grupo: 'estructura' },
-  { id: 'mg',        nombre: 'Ametralladora',   grupo: 'infantería' },
-  { id: 'at',        nombre: 'Anti tanque',     grupo: 'infantería' },
-  { id: 'inf',       nombre: 'Infantería',      grupo: 'infantería' },
-  { id: 'sniper',    nombre: 'Sniper',          grupo: 'infantería' },
-  { id: 'tank',      nombre: 'Tanque',          grupo: 'blindados' },
-  { id: 'tankL',     nombre: 'Tanque L',        grupo: 'blindados' },
-  { id: 'tankM',     nombre: 'Tanque M',        grupo: 'blindados' },
-  { id: 'tankR',     nombre: 'Tanque R',        grupo: 'blindados' },
-  { id: 'arty',      nombre: 'Artillería',      grupo: 'blindados' },
-  { id: 'warn',      nombre: 'Atención',        grupo: 'marcas' },
-  { id: 'ok',        nombre: 'OK',              grupo: 'marcas' },
-  { id: 'no',        nombre: 'Prohibido',       grupo: 'marcas' },
-  { id: 'eye',       nombre: 'Vigilar',         grupo: 'marcas' },
-  { id: 'skull',     nombre: 'Zona caliente',   grupo: 'marcas' },
-  { id: 'flag',      nombre: 'Punto',           grupo: 'marcas' }
+  { id: 'garrison', nombre: 'Garrison', grupo: 'estructuras', img: 'garry-plain' },
+  { id: 'op', nombre: 'OP', grupo: 'estructuras', img: 'outpost-normal-plain', numerado: true },
+  { id: 'opRecon', nombre: 'OP de recon', grupo: 'estructuras', img: 'outpost-recon-plain' },
+  { id: 'airhead', nombre: 'Airhead', grupo: 'estructuras', img: 'airhead-plain' },
+  { id: 'nodeMan', nombre: 'Nodo manpower', grupo: 'estructuras', img: 'node-manpower' },
+  { id: 'nodeMun', nombre: 'Nodo munición', grupo: 'estructuras', img: 'node-munition' },
+  { id: 'nodeFuel', nombre: 'Nodo combustible', grupo: 'estructuras', img: 'node-fuel' },
+  { id: 'supply', nombre: 'Supplies', grupo: 'estructuras', img: 'supplies-plain' },
+  { id: 'supplyDrop', nombre: 'Supply drop', grupo: 'estructuras', img: 'supply-drop' },
+  { id: 'repair', nombre: 'Estación de reparación', grupo: 'estructuras', img: 'repair-station' },
+
+  { id: 'truck', nombre: 'Camión de transporte', grupo: 'vehículos', img: 'truck-transport' },
+  { id: 'truckSupply', nombre: 'Camión de supply', grupo: 'vehículos', img: 'truck-supply' },
+  { id: 'jeep', nombre: 'Jeep', grupo: 'vehículos', img: 'truck-jeep' },
+  { id: 'halftrack', nombre: 'Half-track', grupo: 'vehículos', img: 'halftrack-plain' },
+  { id: 'tankRecon', nombre: 'Tanque de recon', grupo: 'vehículos', img: 'tank-recon' },
+  { id: 'tankLight', nombre: 'Tanque liviano', grupo: 'vehículos', img: 'tank-light' },
+  { id: 'tankMed', nombre: 'Tanque mediano', grupo: 'vehículos', img: 'tank-med' },
+  { id: 'tankHeavy', nombre: 'Tanque pesado', grupo: 'vehículos', img: 'tank-heavy' },
+  { id: 'atgun', nombre: 'Cañón AT', grupo: 'vehículos', img: 'at-gun-plain' },
+
+  { id: 'officer', nombre: 'Squad leader', grupo: 'clases', img: 'class-officer' },
+  { id: 'inf', nombre: 'Fusilero', grupo: 'clases', img: 'class-rifleman' },
+  { id: 'mg', nombre: 'Ametralladora', grupo: 'clases', img: 'class-machine-gunner' },
+  { id: 'at', nombre: 'Anti tanque', grupo: 'clases', img: 'class-anti-tank' },
+  { id: 'engineer', nombre: 'Ingeniero', grupo: 'clases', img: 'class-engineer' },
+  { id: 'support', nombre: 'Soporte', grupo: 'clases', img: 'class-support' },
+  { id: 'sniper', nombre: 'Sniper', grupo: 'clases', img: 'class-sniper' },
+  { id: 'spotter', nombre: 'Spotter', grupo: 'clases', img: 'class-spotter' },
+  { id: 'assault', nombre: 'Asalto', grupo: 'clases', img: 'class-assault' },
+  { id: 'mineAT', nombre: 'Mina AT', grupo: 'clases', img: 'mine-at' },
+  { id: 'explosivo', nombre: 'Explosivo', grupo: 'clases', img: 'box-explosive' },
+
+  { id: 'enemyGarry', nombre: 'Garry enemiga', grupo: 'enemigo', img: 'enemy-garry' },
+  { id: 'enemyOp', nombre: 'OP enemigo', grupo: 'enemigo', img: 'enemy-op' },
+  { id: 'enemyInf', nombre: 'Infantería enemiga', grupo: 'enemigo', img: 'enemy-infantry' },
+  { id: 'enemyTank', nombre: 'Tanque enemigo', grupo: 'enemigo', img: 'enemy-tank' },
+
+  { id: 'tankL', nombre: 'Posición L', grupo: 'marcas', svg: true },
+  { id: 'tankM', nombre: 'Posición M', grupo: 'marcas', svg: true },
+  { id: 'tankR', nombre: 'Posición R', grupo: 'marcas', svg: true },
+  { id: 'warn', nombre: 'Atención', grupo: 'marcas', svg: true },
+  { id: 'ok', nombre: 'OK', grupo: 'marcas', svg: true },
+  { id: 'no', nombre: 'Prohibido', grupo: 'marcas', svg: true },
+  { id: 'eye', nombre: 'Vigilar', grupo: 'marcas', svg: true },
+  { id: 'skull', nombre: 'Zona caliente', grupo: 'marcas', svg: true },
+  { id: 'flag', nombre: 'Punto', grupo: 'marcas', svg: true }
 ];
+U.icono = function (id) { return U.ICONS.find(function (i) { return i.id === id; }); };
+U.iconoImg = function (id) {
+  var i = U.icono(id);
+  return i && i.img ? U.ICONO_BASE + i.img + '.png' : null;
+};

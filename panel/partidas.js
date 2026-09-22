@@ -134,21 +134,22 @@ U.partidas = (function () {
 
   function nueva() {
     var f = U.el('div', { class: 'form' });
-    var datos = { nombre: '', fecha: new Date().toISOString().slice(0, 10), mapa: 'carentan', modo: 'Warfare', bando: 'Aliados' };
+    var datos = { nombre: '', fecha: new Date().toISOString().slice(0, 10), mapa: 'carentan', modo: 'x36', bando: 'Aliados' };
     f.appendChild(U.campo('Nombre', datos.nombre, function (v) { datos.nombre = v; }, { ph: 'ej: URA vs 360' }));
     f.appendChild(U.campo('Fecha', datos.fecha, function (v) { datos.fecha = v; }, { tipo: 'date' }));
     f.appendChild(U.campo('Mapa', U.map(datos.mapa).nombre, function (v) {
       var m = U.MAPS.find(function (x) { return x.nombre === v; }); if (m) datos.mapa = m.id;
     }, { opciones: U.MAPS.map(function (m) { return m.nombre; }) }));
-    f.appendChild(U.campo('Modo', datos.modo, function (v) { datos.modo = v; }, { opciones: U.MODOS }));
+    f.appendChild(U.campo('Formato', datos.modo, function (v) { datos.modo = v; }, { opciones: U.FORMATOS }));
+    f.appendChild(U.el('p', { class: 'ayuda', text: 'x25 y x36 arrancan sin ariete ni incursor, con la defensa en su lugar. Después se edita todo a mano.' }));
     f.appendChild(U.campo('Bando', datos.bando, function (v) { datos.bando = v; }, { opciones: U.BANDOS }));
     var pie = U.el('div', { class: 'modal-pie' });
     var m = U.modal('Nueva partida', f, { pie: pie });
     pie.appendChild(U.el('button', {
       class: 'btn primary', text: 'Crear y abrir', onclick: function () {
-        var p = U.nuevaPartida(datos.nombre.trim() || ('Partida ' + datos.fecha));
+        var p = U.nuevaPartida(datos.nombre.trim() || ('Partida ' + datos.fecha), datos.modo);
         p.fecha = datos.fecha; p.mapa = datos.mapa; p.strat.mapa = datos.mapa;
-        p.modo = datos.modo; p.bando = datos.bando;
+        p.bando = datos.bando;
         U.state.partidas.push(p);
         U.save(true);
         m.cerrar(); abrir(p.id);
