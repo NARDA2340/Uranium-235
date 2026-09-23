@@ -20,8 +20,29 @@ U.sketch = (function () {
   var tool = 'sel', grupoActivo = 'sq_red', colorLibre = '#e6bc55';
   var grosor = 7, escalaIcono = 1, iconoActivo = 'garrison';
   var sel = null, dibujando = null, shotsCache = {}, paneo = null, recien = null, pinT = null;
+  var multi = [];                     // selección de varios a la vez
+  var espacio = false;                // Espacio apretado = mano para mover el mapa
   var vista = { z: 1, x: 0, y: 0 };   // zoom y esquina del viewBox
-  var abierto = { iconos: true, mapa: false };
+  var abierto = { iconos: true, mapa: false, grupos: false };
+
+  /* colores libres: para marcar cosas que no son de un escuadrón */
+  var LIBRES = ['#e6bc55', '#f2efe6', '#1a1914', '#d94b3a', '#3b82c4', '#6fae3f', '#e08a2e', '#9b6bd1'];
+
+  /* estilo de cada herramienta de dibujo, como en StratSketch:
+     tipo de línea, punta, relleno y forma */
+  var estilo = {
+    pen: { trazo: 'solido', punta: 'nada' },
+    line: { trazo: 'solido', punta: 'flecha' },
+    rect: { trazo: 'solido', relleno: 'suave', forma: 'rect' },
+    poly: { trazo: 'solido', relleno: 'suave' },
+    circle: { trazo: 'guiones', relleno: 'suave' }
+  };
+  var OPACIDAD = { nada: 0, suave: 0.18, lleno: 0.5 };
+  var FORMAS = [
+    { id: 'rect', t: 'Rectángulo', real: 'rect' }, { id: 'cuadrado', t: 'Cuadrado', real: 'rect', fija: true },
+    { id: 'elipse', t: 'Elipse', real: 'elipse' }, { id: 'circulo', t: 'Círculo', real: 'elipse', fija: true },
+    { id: 'tri', t: 'Triángulo', real: 'tri' }, { id: 'rombo', t: 'Rombo', real: 'rombo' }
+  ];
   var historia = {}, futuro = {};
 
   /* ---------------- helpers ---------------- */
@@ -32,6 +53,41 @@ U.sketch = (function () {
   function objs() { return slide().objs; }
   function ocultos() { var st = strat(); if (!st.ocultos) st.ocultos = {}; return st.ocultos; }
   function visible(o) { return !(o.grupo && ocultos()[o.grupo]); }
+
+  /* ---- selección: uno (sel) o varios (multi) ---- */
+  function limpiarSel() { sel = null; multi = []; }
+  function estaSel(o) { return sel === o || multi.indexOf(o) >= 0; }
+  function seleccionados() { return multi.length ? multi.slice() : (sel ? [sel] : []); }
+  function fijarSel(lista) {
+    if (lista.length === 1) { sel = lista[0]; multi = []; }
+    else { sel = null; multi = lista; }
+    pintarTools(); render();
+  }
+
+  /* estilo de un objeto, con los valores de antes para lo ya dibujado */
+  function props(o) {
+    return {
+      trazo: o.trazo || (o.tipo === 'circle' ? 'guiones' : 'solido'),
+      punta: o.punta || (o.tipo === 'line' ? 'flecha' : 'nada'),
+      relleno: o.relleno || 'suave',
+      forma: o.forma || 'rect'
+    };
+  }
+  function estiloDe(tipo) {
+    var e = estilo[tipo]; if (!e) return {};
+    var out = {};
+    Object.keys(e).forEach(function (k) { if (k !== 'forma') out[k] = e[k]; });
+    if (tipo === 'rect') out.forma = formaReal(e.forma);
+    return out;
+  }
+  function formaReal(id) { var f = FORMAS.find(function (x) { return x.id === id; }); return f ? f.real : 'rect'; }
+  function formaFija(id) { var f = FORMAS.find(function (x) { return x.id === id; }); return !!(f && f.fija); }
+  function guiones(trazo, g) {
+    if (trazo === 'guiones') return (g * 2.4).toFixed(1) + ',' + (g * 1.8).toFixed(1);
+    if (trazo === 'puntos') return '0.01,' + (g * 2).toFixed(1);
+    return null;
+  }
+  function colorElegido() { return grupoActivo === '__libre' ? { color: colorLibre } : { grupo: grupoActivo }; }
   function colorDe(o) {
     if (o.grupo) { var g = U.group(o.grupo); if (g) return U.unit(g.unidad).color; }
     return o.color || colorLibre;
@@ -70,14 +126,14 @@ U.sketch = (function () {
     if (!h.length) { U.toast('Nada para deshacer'); return; }
     (futuro[id] = futuro[id] || []).push(JSON.stringify(objs()));
     slide().objs = JSON.parse(h.pop());
-    sel = null; U.save(); render();
+    limpiarSel(); U.save(); pintarTools(); render();
   }
   function rehacer() {
     var id = slide().id, f = futuro[id] || [];
     if (!f.length) return;
     (historia[id] = historia[id] || []).push(JSON.stringify(objs()));
     slide().objs = JSON.parse(f.pop());
-    sel = null; U.save(); render();
+    limpiarSel(); U.save(); pintarTools(); render();
   }
 
   /* ---------------- montaje ---------------- */
@@ -102,7 +158,7 @@ U.sketch = (function () {
       U.el('button', { text: '⤢', title: 'Ver el mapa entero', onclick: function () { encuadrar(); } })
     ]));
     svg = ns('svg', { class: 'sk-svg', xmlns: 'http://www.w3.org/2000/svg' });
-    gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g'); gSel = ns('g', { class: 'sk-selcapa' });
+    gMapa = ns('g'); gObjs = ns('g'); gTmp = ns('g', { 'pointer-events': 'none' }); gSel = ns('g', { class: 'sk-selcapa' });
     svg.appendChild(defsSVG());
     svg.appendChild(gMapa); svg.appendChild(gObjs); svg.appendChild(gTmp); svg.appendChild(gSel);
     marcoMapa.appendChild(svg);
@@ -206,10 +262,11 @@ U.sketch = (function () {
 
   /* ---------------- barra de herramientas ---------------- */
   var TOOLS = [
-    { id: 'sel', ico: '➚', t: 'Mover · V — arrastrá para mover, doble clic para editar, Q/E gira' },
-    { id: 'pen', ico: '✎', t: 'Trazo libre · P — mantené apretado para el grosor' },
-    { id: 'line', ico: '↗', t: 'Flecha · L — mantené apretado para el grosor' },
-    { id: 'rect', ico: '▭', t: 'Zona rectangular · R' },
+    { id: 'sel', ico: '➚', t: 'Seleccionar · V — arrastrá en el vacío para agarrar varios, arrastrá un objeto para moverlo, doble clic para editar' },
+    { id: 'mano', ico: '✋', t: 'Mover el mapa · H (o mantené Espacio)' },
+    { id: 'pen', ico: '✎', t: 'Trazo libre · P' },
+    { id: 'line', ico: '↗', t: 'Línea / flecha · L' },
+    { id: 'rect', ico: '▭', t: 'Formas · R — rectángulo, cuadrado, elipse, círculo, triángulo, rombo' },
     { id: 'poly', ico: '⬠', t: 'Zona libre · G — doble clic cierra' },
     { id: 'circle', ico: '◯', t: 'Radio · C' },
     { id: 'icon', ico: '⚑', t: 'Poner el ícono elegido · I' },
@@ -234,7 +291,7 @@ U.sketch = (function () {
     TOOLS.forEach(function (t) {
       var b = U.el('button', {
         class: 'sk-tool' + (tool === t.id ? ' on' : ''), title: t.t, html: t.ico,
-        onclick: function () { tool = t.id; sel = null; cerrarPop(); pintarTools(); render(); }
+        onclick: function () { terminar(); tool = t.id; cerrarPop(); pintarTools(); render(); }
       });
       mantener(b, function () { popTamano(b, t.id); });
       gt.appendChild(b);
@@ -247,45 +304,63 @@ U.sketch = (function () {
     acc.appendChild(U.el('button', { class: 'sk-tool', html: '↷', title: 'Rehacer · Ctrl+Y', onclick: rehacer }));
     toolbar.appendChild(acc);
 
-    /* --- grupos (el color con identidad) --- */
-    toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Grupo' }));
+    /* --- estilo del trazo (según la herramienta o lo seleccionado) --- */
+    var est = panelEstilo();
+    if (est) toolbar.appendChild(est);
+
+    /* --- escuadrones: tocar el activo otra vez lo suelta y pasa a libre --- */
+    toolbar.appendChild(U.el('div', { class: 'sk-sep', text: 'Escuadrón' }));
+    var grupos = gruposDibujables(), LIM = 6;
+    var visibles = (abierto.grupos || grupos.length <= LIM + 1) ? grupos : grupos.slice(0, LIM);
+    var activo = grupos.find(function (g) { return g.id === grupoActivo; });
+    if (activo && visibles.indexOf(activo) < 0) visibles = visibles.concat([activo]);
     var gg = U.el('div', { class: 'sk-swatches' });
-    gruposDibujables().forEach(function (g) {
-      var u = U.unit(g.unidad);
+    visibles.forEach(function (g) {
       gg.appendChild(U.el('button', {
         class: 'sw' + (grupoActivo === g.id ? ' on' : ''),
-        style: { '--c': u.color },
-        title: g.titulo + ' · ' + U.plantel(g.id).length + ' jugadores',
+        style: { '--c': U.unit(g.unidad).color },
+        title: g.titulo + ' · ' + U.plantel(g.id).length + ' jugadores' + (grupoActivo === g.id ? ' — clic para soltarlo y usar color libre' : ''),
         text: corto(g),
         onclick: function () {
-          // cambiar de color termina lo que se estaba haciendo: lo que ya
-          // está puesto no se toca y la herramienta queda lista para
-          // poner lo mismo con el color nuevo
-          grupoActivo = g.id;
-          terminar();
-          pintarTools(); render();
+          // cambiar de color termina lo que se estaba haciendo: lo ya puesto
+          // no se toca y la herramienta queda lista para el color nuevo
+          grupoActivo = grupoActivo === g.id ? '__libre' : g.id;
+          terminar(); pintarTools(); render();
         }
       }));
     });
-    var libre = U.el('button', {
-      class: 'sw libre' + (grupoActivo === '__libre' ? ' on' : ''),
-      style: { '--c': colorLibre }, title: 'Color libre, sin grupo', text: '···'
+    if (grupos.length > LIM + 1) {
+      gg.appendChild(U.el('button', {
+        class: 'sw-mas', text: abierto.grupos ? '▴ ver menos' : '▾ ver ' + (grupos.length - LIM) + ' más',
+        onclick: function () { abierto.grupos = !abierto.grupos; pintarTools(); }
+      }));
+    }
+    toolbar.appendChild(gg);
+
+    /* --- color libre: sin escuadrón --- */
+    toolbar.appendChild(U.el('div', {
+      class: 'sk-sep' + (grupoActivo === '__libre' ? ' activo' : ''),
+      text: grupoActivo === '__libre' ? 'Libre · en uso' : 'Color libre'
+    }));
+    var cl = U.el('div', { class: 'sk-libres' });
+    var propio = LIBRES.indexOf(colorLibre) < 0;
+    LIBRES.concat(propio ? [colorLibre] : []).forEach(function (c) {
+      cl.appendChild(U.el('button', {
+        class: 'lib' + (grupoActivo === '__libre' && colorLibre === c ? ' on' : ''),
+        style: { '--c': c }, title: 'Color libre',
+        onclick: function () { grupoActivo = '__libre'; colorLibre = c; terminar(); pintarTools(); render(); }
+      }));
     });
-    libre.addEventListener('click', function () {
-      grupoActivo = '__libre';
-      terminar();
+    var otro = U.el('button', { class: 'lib otro', title: 'Otro color', text: '+' });
+    otro.addEventListener('click', function () {
       var inp = U.el('input', { type: 'color', value: colorLibre, class: 'sk-color-oculto' });
       document.body.appendChild(inp);
-      inp.addEventListener('input', function () {
-        colorLibre = inp.value;
-        pintarTools(); render();
-      });
-      inp.addEventListener('change', function () { inp.remove(); });
+      inp.addEventListener('input', function () { grupoActivo = '__libre'; colorLibre = inp.value; });
+      inp.addEventListener('change', function () { inp.remove(); terminar(); pintarTools(); render(); });
       inp.click();
-      pintarTools();
     });
-    gg.appendChild(libre);
-    toolbar.appendChild(gg);
+    cl.appendChild(otro);
+    toolbar.appendChild(cl);
 
     /* --- íconos, plegable --- */
     toolbar.appendChild(plegable('Íconos', 'iconos', function (caja) {
@@ -337,6 +412,98 @@ U.sketch = (function () {
 
     /* --- acciones finales --- */
 
+  }
+
+  /* ---------- panel de estilo, como el de StratSketch ----------
+     Con una herramienta de dibujo elegida define cómo sale lo próximo;
+     con formas seleccionadas, las cambia a ellas. */
+  function panelEstilo() {
+    var objetivo = seleccionados().filter(function (o) { return estilo[o.tipo]; });
+    var tipo = objetivo.length ? objetivo[0].tipo : (estilo[tool] ? tool : null);
+    if (!tipo) return null;
+    var actual = objetivo.length ? props(objetivo[0]) : estilo[tipo];
+    if (objetivo.length && tipo === 'rect') {
+      var f = objetivo[0].forma || 'rect';
+      actual = Object.assign({}, actual, { forma: f === 'elipse' ? 'elipse' : f });
+    }
+    var caja = U.el('div', { class: 'sk-estilo' });
+
+    function fila(titulo, prop, opciones, aplica) {
+      if (!aplica) return;
+      caja.appendChild(U.el('span', { class: 'sk-est-t', text: titulo }));
+      var g = U.el('div', { class: 'sk-est-op n' + opciones.length });
+      opciones.forEach(function (op) {
+        g.appendChild(U.el('button', {
+          class: 'sk-est' + (actual[prop] === op.id ? ' on' : ''), title: op.t, html: op.svg,
+          onclick: function () { aplicarEstilo(tipo, objetivo, prop, op.id); }
+        }));
+      });
+      caja.appendChild(g);
+    }
+    var L = function (extra, dash) {
+      return '<svg viewBox="0 0 40 16"><line x1="5" y1="8" x2="' + (extra ? 29 : 35) + '" y2="8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"' + (dash ? ' stroke-dasharray="' + dash + '"' : '') + '/>' + (extra || '') + '</svg>';
+    };
+    var cabeza = '<path d="M36,8 L27,3 L27,13 Z" fill="currentColor"/>';
+    var cola = '<path d="M4,8 L13,3 L13,13 Z" fill="currentColor"/>';
+
+    fila('Forma', 'forma', FORMAS.map(function (fm) {
+      var d = {
+        rect: '<rect x="6" y="3" width="28" height="10" rx="1"/>', cuadrado: '<rect x="13" y="1.5" width="13" height="13" rx="1"/>',
+        elipse: '<ellipse cx="20" cy="8" rx="14" ry="6"/>', circulo: '<circle cx="20" cy="8" r="6.5"/>',
+        tri: '<path d="M20,1.5 L28,14.5 L12,14.5 Z"/>', rombo: '<path d="M20,1 L28,8 L20,15 L12,8 Z"/>'
+      }[fm.id];
+      return { id: fm.id, t: fm.t, svg: '<svg viewBox="0 0 40 16" fill="none" stroke="currentColor" stroke-width="2">' + d + '</svg>' };
+    }), tipo === 'rect');
+    fila('Línea', 'trazo', [
+      { id: 'solido', t: 'Continua', svg: L() },
+      { id: 'guiones', t: 'Guiones', svg: L('', '6,4') },
+      { id: 'puntos', t: 'Puntos', svg: L('', '0.01,5') }
+    ], true);
+    fila('Punta', 'punta', [
+      { id: 'nada', t: 'Sin punta', svg: L() },
+      { id: 'flecha', t: 'Flecha', svg: L(cabeza) },
+      { id: 'doble', t: 'Flecha doble', svg: '<svg viewBox="0 0 40 16"><line x1="11" y1="8" x2="29" y2="8" stroke="currentColor" stroke-width="2.4"/>' + cabeza + cola + '</svg>' },
+      { id: 'barra', t: 'Tope (bloqueo)', svg: L('<line x1="33" y1="2" x2="33" y2="14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>') }
+    ], tipo === 'pen' || tipo === 'line');
+    fila('Relleno', 'relleno', [
+      { id: 'nada', t: 'Sin relleno', svg: '<svg viewBox="0 0 40 16"><rect x="11" y="2" width="18" height="12" fill="none" stroke="currentColor" stroke-width="2"/></svg>' },
+      { id: 'suave', t: 'Suave', svg: '<svg viewBox="0 0 40 16"><rect x="11" y="2" width="18" height="12" fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="2"/></svg>' },
+      { id: 'lleno', t: 'Lleno', svg: '<svg viewBox="0 0 40 16"><rect x="11" y="2" width="18" height="12" fill="currentColor" fill-opacity=".75" stroke="currentColor" stroke-width="2"/></svg>' }
+    ], tipo === 'rect' || tipo === 'poly' || tipo === 'circle');
+
+    /* grosor */
+    var gv = objetivo.length ? (objetivo[0].grosor || 7) : grosor;
+    caja.appendChild(U.el('span', { class: 'sk-est-t', text: 'Grosor' }));
+    var fg = U.el('div', { class: 'sk-est-gros' });
+    var rng = U.el('input', { type: 'range', min: 2, max: 26, step: 1, value: gv });
+    var val = U.el('b', { text: gv });
+    var tomado = false;
+    rng.addEventListener('input', function () {
+      val.textContent = rng.value;
+      grosor = Number(rng.value);
+      if (!objetivo.length) return;
+      if (!tomado) { snapshot(); tomado = true; }
+      objetivo.forEach(function (o) { o.grosor = grosor; repintarObj(o); });
+    });
+    rng.addEventListener('change', function () { tomado = false; if (objetivo.length) U.save(); });
+    fg.appendChild(rng); fg.appendChild(val);
+    caja.appendChild(fg);
+    return caja;
+  }
+
+  function aplicarEstilo(tipo, objetivo, prop, valor) {
+    estilo[tipo][prop] = valor;                     // lo próximo sale así
+    if (objetivo.length) {
+      snapshot();
+      objetivo.forEach(function (o) {
+        if (prop === 'forma') { if (o.tipo === 'rect') o.forma = formaReal(valor); }
+        else if (prop === 'punta') { if (o.tipo === 'pen' || o.tipo === 'line') o.punta = valor; }
+        else if (prop === 'relleno') { if (o.tipo !== 'pen' && o.tipo !== 'line') o.relleno = valor; }
+        else o[prop] = valor;
+      });
+      U.save(); render();
+    }
+    pintarTools();
   }
 
   /* nombre corto para la muestra de color y la leyenda */
@@ -479,16 +646,29 @@ U.sketch = (function () {
       var ctrl = e.ctrlKey || e.metaKey;
       if (ctrl && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? rehacer() : deshacer(); return; }
       if (ctrl && e.key.toLowerCase() === 'y') { e.preventDefault(); rehacer(); return; }
+      if (ctrl && e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        tool = 'sel'; fijarSel(objs().filter(visible));
+        return;
+      }
       if (ctrl) return;
-      var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
+      if (e.key === ' ') {
+        e.preventDefault();
+        if (!espacio) { espacio = true; marcoMapa.classList.add('mano'); }
+        return;
+      }
+      var mapa = { v: 'sel', h: 'mano', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
       var k = e.key.toLowerCase();
-      if (mapa[k]) { tool = mapa[k]; sel = null; pintarTools(); render(); }
+      if (mapa[k]) { terminar(); tool = mapa[k]; pintarTools(); render(); }
       if (e.key === '+' || e.key === '=') zoomA(vista.z * 1.4);
       if (e.key === '-' || e.key === '_') zoomA(vista.z / 1.4);
       if (k === '0') encuadrar();
-      if ((e.key === 'Delete' || e.key === 'Backspace') && sel) borrar(sel);
+      if ((e.key === 'Delete' || e.key === 'Backspace') && seleccionados().length) borrarSel();
       if ((k === 'q' || k === 'e') && sel && rotable(sel)) girarSel(k === 'q' ? -15 : 15);
-      if (e.key === 'Escape') { dibujando = null; sel = null; U.vaciar(gTmp); cerrarPop(); render(); }
+      if (e.key === 'Escape') { terminar(); cerrarPop(); pintarTools(); render(); }
+    });
+    document.addEventListener('keyup', function (e) {
+      if (e.key === ' ' && espacio) { espacio = false; if (marcoMapa) marcoMapa.classList.remove('mano'); }
     });
 
     /* soltar una imagen encima del mapa la pinea donde la soltaste */
@@ -543,17 +723,26 @@ U.sketch = (function () {
       return;
     }
 
-    if (e.button === 1 || e.button === 2 || e.shiftKey) { empezarPaneo(e, false); return; }
+    if (e.button === 1 || e.button === 2 || espacio || tool === 'mano') { empezarPaneo(e, false); return; }
     if (e.button !== 0) return;
 
     if (tool === 'del') { if (obj) borrar(obj); else empezarPaneo(e, false); return; }
 
     if (tool === 'sel' || tool === 'icon') {
       if (obj) {
-        dibujando = { modo: 'mover', o: obj, p0: p, sx: e.clientX, sy: e.clientY, snap: JSON.parse(JSON.stringify(obj)), movido: false };
+        if (e.shiftKey && tool === 'sel') { alternar(obj); return; }
+        // si es parte de lo seleccionado se mueve todo junto
+        var lista = (multi.length && estaSel(obj)) ? multi.slice() : [obj];
+        dibujando = {
+          modo: 'mover', o: obj, p0: p, sx: e.clientX, sy: e.clientY, movido: false,
+          lista: lista.map(function (x) { return { o: x, snap: JSON.parse(JSON.stringify(x)) }; })
+        };
         return;
       }
-      if (tool === 'sel') { empezarPaneo(e, true); return; }
+      if (tool === 'sel') {
+        dibujando = { modo: 'caja', a: p, b: p, sx: e.clientX, sy: e.clientY, sumar: e.shiftKey };
+        return;
+      }
       dibujando = { modo: 'colocar', p: p, sx: e.clientX, sy: e.clientY, e: e };
       return;
     }
@@ -580,7 +769,38 @@ U.sketch = (function () {
   function terminar() {
     if (dibujando && dibujando.modo === 'poly' && dibujando.pts.length > 2) cerrarPoly();
     dibujando = null; U.vaciar(gTmp);
-    sel = null;
+    limpiarSel();
+  }
+
+  function cajaDe(a, b) {
+    return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), w: Math.abs(b.x - a.x), h: Math.abs(b.y - a.y) };
+  }
+  /* la caja de una forma: cuadrado y círculo (o Shift) salen parejos */
+  function cajaForma(d) {
+    var w = d.b.x - d.a.x, h = d.b.y - d.a.y;
+    if (d.fija || formaFija(estilo.rect.forma)) {
+      var m = Math.max(Math.abs(w), Math.abs(h));
+      w = (w < 0 ? -1 : 1) * m; h = (h < 0 ? -1 : 1) * m;
+    }
+    return {
+      x: Math.min(d.a.x, d.a.x + w), y: Math.min(d.a.y, d.a.y + h), w: Math.abs(w), h: Math.abs(h),
+      forma: formaReal(estilo.rect.forma)
+    };
+  }
+  function toca(a, b) { return a.x <= b.x + b.w && a.x + a.w >= b.x && a.y <= b.y + b.h && a.y + a.h >= b.y; }
+
+  /* Shift + clic suma o saca un objeto de la selección */
+  function alternar(o) {
+    var l = seleccionados(), i = l.indexOf(o);
+    if (i >= 0) l.splice(i, 1); else l.push(o);
+    fijarSel(l);
+  }
+
+  function borrarSel() {
+    var l = seleccionados(); if (!l.length) return;
+    snapshot();
+    slide().objs = objs().filter(function (o) { return l.indexOf(o) < 0; });
+    renumerar(); limpiarSel(); U.save(); pintarTools(); render();
   }
 
   function empezarPaneo(e, esClic) {
@@ -617,11 +837,22 @@ U.sketch = (function () {
         marcoMapa.classList.add('moviendo');
       }
       var dx = p.x - d.p0.x, dy = p.y - d.p0.y;
-      var o = d.o, sn = d.snap;
-      if (sn.pts) o.pts = sn.pts.map(function (q) { return [q[0] + dx, q[1] + dy]; });
-      if (sn.x !== undefined) { o.x = sn.x + dx; o.y = sn.y + dy; }
-      if (sn.x2 !== undefined) { o.x2 = sn.x2 + dx; o.y2 = sn.y2 + dy; }
-      repintarObj(o);
+      d.lista.forEach(function (it) {
+        var o = it.o, sn = it.snap;
+        if (sn.pts) o.pts = sn.pts.map(function (q) { return [q[0] + dx, q[1] + dy]; });
+        if (sn.x !== undefined) { o.x = sn.x + dx; o.y = sn.y + dy; }
+        if (sn.x2 !== undefined) { o.x2 = sn.x2 + dx; o.y2 = sn.y2 + dy; }
+        repintarObj(o);
+      });
+    }
+    else if (d.modo === 'caja') {
+      d.b = p;
+      var px = 1 / (escalaPantalla() || 1), r = cajaDe(d.a, d.b);
+      U.vaciar(gTmp);
+      gTmp.appendChild(ns('rect', {
+        x: r.x, y: r.y, width: r.w, height: r.h, fill: '#fff', 'fill-opacity': .07,
+        stroke: '#fff', 'stroke-opacity': .8, 'stroke-width': 1.2 * px, 'stroke-dasharray': (5 * px) + ',' + (4 * px)
+      }));
     }
     else if (d.modo === 'rotar') {
       var ang = Math.atan2(p.x - d.c.x, -(p.y - d.c.y)) * 180 / Math.PI;
@@ -630,8 +861,8 @@ U.sketch = (function () {
       repintarObj(d.o);
       var rr = U.$('#sk-rot'); if (rr) { rr.value = d.o.rot; rr.nextSibling.textContent = d.o.rot + '°'; }
     }
-    else if (d.b !== undefined) { d.b = p; previa(); }
-    else if (d.modo === 'poly') previa();
+    else if (d.b !== undefined) { d.b = p; d.fija = e.shiftKey; previa(); }
+    else if (d.modo === 'poly') { d.cursor = [p.x, p.y]; previa(); }
   }
 
   function up() {
@@ -650,11 +881,18 @@ U.sketch = (function () {
       if (Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) > 10) nuevo({ tipo: 'line', x: d.a.x, y: d.a.y, x2: d.b.x, y2: d.b.y });
       dibujando = null;
     } else if (d.modo === 'rect') {
-      if (Math.abs(d.b.x - d.a.x) > 10) nuevo({
-        tipo: 'rect', x: Math.min(d.a.x, d.b.x), y: Math.min(d.a.y, d.b.y),
-        w: Math.abs(d.b.x - d.a.x), h: Math.abs(d.b.y - d.a.y)
-      });
+      var cr = cajaForma(d);
+      if (cr.w > 10 && cr.h > 4) nuevo(Object.assign({ tipo: 'rect' }, cr));
       dibujando = null;
+    } else if (d.modo === 'caja') {
+      dibujando = null; U.vaciar(gTmp);
+      var chico = Math.abs(d.b.x - d.a.x) * escalaPantalla() < 4 && Math.abs(d.b.y - d.a.y) * escalaPantalla() < 4;
+      if (chico) { if (!d.sumar && seleccionados().length) fijarSel([]); return; }
+      var rc = cajaDe(d.a, d.b);
+      var dentro = objs().filter(function (o) { return visible(o) && toca(bbox(o), rc); });
+      if (d.sumar) seleccionados().forEach(function (o) { if (dentro.indexOf(o) < 0) dentro.push(o); });
+      fijarSel(dentro);
+      return;
     } else if (d.modo === 'circle') {
       var r = Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y);
       if (r > 10) nuevo({ tipo: 'circle', x: d.a.x, y: d.a.y, r: r });
@@ -700,13 +938,12 @@ U.sketch = (function () {
 
   function nuevo(base) {
     snapshot();
-    var o = Object.assign({ id: U.uid('o'), grosor: grosor }, base);
-    if (grupoActivo === '__libre') o.color = colorLibre; else o.grupo = grupoActivo;
+    var o = Object.assign({ id: U.uid('o'), grosor: grosor }, estiloDe(base.tipo), base, colorElegido());
     objs().push(o);
     renumerar();
     // un clic y queda puesto: no se selecciona ni hay que "fijarlo".
     // Para editarlo después, doble clic.
-    sel = null; recien = o.id;
+    limpiarSel(); recien = o.id;
     if (o.tipo === 'text' || o.tipo === 'pin') tool = 'sel';
     U.save(); pintarTools(); render();
     return o;
@@ -732,7 +969,7 @@ U.sketch = (function () {
     var i = objs().indexOf(o);
     if (i >= 0) objs().splice(i, 1);
     renumerar();
-    sel = null; U.save(); render();
+    limpiarSel(); U.save(); pintarTools(); render();
   }
 
   /* Agrega una captura al mapa. El pin se crea apenas tenemos la imagen;
@@ -770,15 +1007,19 @@ U.sketch = (function () {
   }
 
   /* ---------------- dibujo ---------------- */
+  /* la vista previa se dibuja igual que el objeto final */
   function previa() {
     U.vaciar(gTmp);
     var d = dibujando; if (!d) return;
-    var c = colorActual(), g = grosor;
-    if (d.modo === 'pen') gTmp.appendChild(ns('polyline', { points: d.pts.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: c, 'stroke-width': g, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-    if (d.modo === 'line') gTmp.appendChild(ns('line', { x1: d.a.x, y1: d.a.y, x2: d.b.x, y2: d.b.y, stroke: c, 'stroke-width': g, 'stroke-linecap': 'round' }));
-    if (d.modo === 'rect') gTmp.appendChild(ns('rect', { x: Math.min(d.a.x, d.b.x), y: Math.min(d.a.y, d.b.y), width: Math.abs(d.b.x - d.a.x), height: Math.abs(d.b.y - d.a.y), fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
-    if (d.modo === 'circle') gTmp.appendChild(ns('circle', { cx: d.a.x, cy: d.a.y, r: Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y), fill: c, 'fill-opacity': .1, stroke: c, 'stroke-width': g, 'stroke-dasharray': g * 2 + ',' + g * 2 }));
-    if (d.modo === 'poly') gTmp.appendChild(ns('polygon', { points: d.pts.map(function (p) { return p.join(','); }).join(' '), fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
+    var base = null;
+    if (d.modo === 'pen') base = { tipo: 'pen', pts: d.pts };
+    else if (d.modo === 'line') base = { tipo: 'line', x: d.a.x, y: d.a.y, x2: d.b.x, y2: d.b.y };
+    else if (d.modo === 'rect') base = Object.assign({ tipo: 'rect' }, cajaForma(d));
+    else if (d.modo === 'circle') base = { tipo: 'circle', x: d.a.x, y: d.a.y, r: Math.hypot(d.b.x - d.a.x, d.b.y - d.a.y) };
+    else if (d.modo === 'poly') base = { tipo: 'poly', pts: d.pts.concat(d.cursor ? [d.cursor] : []) };
+    if (!base) return;
+    var o = Object.assign({ id: 'previa', grosor: grosor }, estiloDe(base.tipo), base, colorElegido());
+    gTmp.appendChild(nodoDe(o, true));
   }
 
   function render() {
@@ -786,6 +1027,7 @@ U.sketch = (function () {
     if (!hay()) { vacio(); return; }
     U.vaciar(gObjs);
     if (sel && objs().indexOf(sel) < 0) sel = null;
+    multi = multi.filter(function (o) { return objs().indexOf(o) >= 0; });
     objs().forEach(function (o) { if (visible(o)) gObjs.appendChild(nodoDe(o)); });
     recien = null;
     pintarSel();
@@ -806,7 +1048,7 @@ U.sketch = (function () {
 
   function nodoDe(o, sinSel) {
     var c = colorDe(o), g = o.grosor || 7;
-    var wrap = ns('g', { 'data-id': o.id, class: 'ob' + (!sinSel && sel === o ? ' sel' : '') + (!sinSel && recien === o.id ? ' nuevo' : '') });
+    var wrap = ns('g', { 'data-id': o.id, class: 'ob' + (!sinSel && estaSel(o) ? ' sel' : '') + (!sinSel && recien === o.id ? ' nuevo' : '') });
     var afuera = wrap;
     // los íconos giran por dentro (el número queda derecho); el resto, entero
     if (o.rot && o.tipo !== 'icon' && o.tipo !== 'pin') {
@@ -814,23 +1056,32 @@ U.sketch = (function () {
       wrap = ns('g', { transform: 'rotate(' + o.rot + ' ' + cc.x + ' ' + cc.y + ')' });
       afuera.appendChild(wrap);
     }
-    if (o.tipo === 'pen') {
-      wrap.appendChild(ns('polyline', { points: o.pts.map(function (p) { return p.join(','); }).join(' '), fill: 'none', stroke: c, 'stroke-width': g, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-    } else if (o.tipo === 'line') {
-      var ang = Math.atan2(o.y2 - o.y, o.x2 - o.x), L = g * 3.2;
-      wrap.appendChild(ns('line', { x1: o.x, y1: o.y, x2: o.x2, y2: o.y2, stroke: c, 'stroke-width': g, 'stroke-linecap': 'round' }));
-      wrap.appendChild(ns('polygon', {
-        points: [[o.x2, o.y2],
-        [o.x2 - L * Math.cos(ang - 0.45), o.y2 - L * Math.sin(ang - 0.45)],
-        [o.x2 - L * Math.cos(ang + 0.45), o.y2 - L * Math.sin(ang + 0.45)]]
-          .map(function (p) { return p.join(','); }).join(' '), fill: c
-      }));
+    var pr = props(o);
+    var linea = { stroke: c, 'stroke-width': g, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-dasharray': guiones(pr.trazo, g) };
+    var relleno = { fill: c, 'fill-opacity': OPACIDAD[pr.relleno] };
+    var pts = function (arr) { return arr.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); };
+    var con = function (a, b) { return Object.assign({}, a, b); };
+    if (o.tipo === 'pen' || o.tipo === 'line') {
+      var P = o.tipo === 'pen' ? o.pts : [[o.x, o.y], [o.x2, o.y2]];
+      // zona de clic más ancha que el trazo: agarrarlo no es puntería
+      if (!sinSel) wrap.appendChild(ns('polyline', { points: pts(P), fill: 'none', stroke: 'transparent', 'stroke-width': Math.max(g, 22), 'stroke-linecap': 'round' }));
+      wrap.appendChild(ns('polyline', con(linea, { points: pts(P), fill: 'none' })));
+      if (pr.punta !== 'nada' && P.length > 1) {
+        puntas(wrap, P, pr.punta, g, c);
+      }
     } else if (o.tipo === 'rect') {
-      wrap.appendChild(ns('rect', { x: o.x, y: o.y, width: o.w, height: o.h, fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
+      var f = o.forma || 'rect', x = o.x, y = o.y, w = o.w, h = o.h;
+      var forma;
+      if (f === 'elipse') forma = ns('ellipse', { cx: x + w / 2, cy: y + h / 2, rx: w / 2, ry: h / 2 });
+      else if (f === 'tri') forma = ns('polygon', { points: pts([[x + w / 2, y], [x + w, y + h], [x, y + h]]) });
+      else if (f === 'rombo') forma = ns('polygon', { points: pts([[x + w / 2, y], [x + w, y + h / 2], [x + w / 2, y + h], [x, y + h / 2]]) });
+      else forma = ns('rect', { x: x, y: y, width: w, height: h });
+      Object.keys(con(linea, relleno)).forEach(function (k) { var v = con(linea, relleno)[k]; if (v !== null && v !== undefined) forma.setAttribute(k, v); });
+      wrap.appendChild(forma);
     } else if (o.tipo === 'poly') {
-      wrap.appendChild(ns('polygon', { points: o.pts.map(function (p) { return p.join(','); }).join(' '), fill: c, 'fill-opacity': .18, stroke: c, 'stroke-width': g }));
+      wrap.appendChild(ns('polygon', con(con(linea, relleno), { points: pts(o.pts) })));
     } else if (o.tipo === 'circle') {
-      wrap.appendChild(ns('circle', { cx: o.x, cy: o.y, r: o.r, fill: c, 'fill-opacity': .10, stroke: c, 'stroke-width': g, 'stroke-dasharray': g * 2 + ',' + g * 2 }));
+      wrap.appendChild(ns('circle', con(con(linea, relleno), { cx: o.x, cy: o.y, r: o.r })));
     } else if (o.tipo === 'text') {
       var s = o.size || 40;
       var t = ns('text', { x: o.x, y: o.y, fill: c, 'font-size': s, 'font-family': 'Zilla Slab, Georgia, serif', 'font-weight': 700, stroke: '#0b0a06', 'stroke-width': s / 12, 'paint-order': 'stroke' });
@@ -915,6 +1166,38 @@ U.sketch = (function () {
     pintarSel();
   }
 
+  /* flecha, flecha doble o tope en la punta de una línea o trazo */
+  function puntas(wrap, P, tipo, g, c) {
+    var L = Math.max(g * 3.2, 16);
+    function dir(desde, haciaAtras) {
+      // mira un poco hacia atrás en el trazo para que la punta no tiemble
+      var a = P[desde], i = desde, paso = haciaAtras ? -1 : 1;
+      while (i + paso >= 0 && i + paso < P.length && Math.hypot(P[i][0] - a[0], P[i][1] - a[1]) < L) i += paso;
+      var b = P[i];
+      return Math.atan2(a[1] - b[1], a[0] - b[0]);
+    }
+    function una(q, ang) {
+      if (tipo === 'barra') {
+        var bl = Math.max(g * 2.4, 12);
+        wrap.appendChild(ns('line', {
+          x1: q[0] + bl * Math.cos(ang + Math.PI / 2), y1: q[1] + bl * Math.sin(ang + Math.PI / 2),
+          x2: q[0] - bl * Math.cos(ang + Math.PI / 2), y2: q[1] - bl * Math.sin(ang + Math.PI / 2),
+          stroke: c, 'stroke-width': g * 1.15, 'stroke-linecap': 'round'
+        }));
+        return;
+      }
+      wrap.appendChild(ns('polygon', {
+        points: [[q[0] + g * 0.6 * Math.cos(ang), q[1] + g * 0.6 * Math.sin(ang)],
+          [q[0] - L * Math.cos(ang - 0.45), q[1] - L * Math.sin(ang - 0.45)],
+          [q[0] - L * Math.cos(ang + 0.45), q[1] - L * Math.sin(ang + 0.45)]]
+          .map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '),
+        fill: c, stroke: c, 'stroke-width': g * 0.4, 'stroke-linejoin': 'round'
+      }));
+    }
+    una(P[P.length - 1], dir(P.length - 1, true));
+    if (tipo === 'doble') una(P[0], dir(0, false));
+  }
+
   /* filtro que oscurece los vehículos (va también en lo exportado) */
   function defsSVG() {
     var d = ns('defs');
@@ -971,16 +1254,14 @@ U.sketch = (function () {
     if (o.tipo === 'circle') return { x: o.x - o.r, y: o.y - o.r, w: o.r * 2, h: o.r * 2 };
     if (o.tipo === 'line') return { x: Math.min(o.x, o.x2), y: Math.min(o.y, o.y2), w: Math.abs(o.x2 - o.x), h: Math.abs(o.y2 - o.y) };
     if (o.tipo === 'pin') { var k = NAT.w / 1100; return { x: o.x - 75 * k, y: o.y - 114 * k, w: 150 * k, h: 114 * k }; }
+    if (o.tipo === 'icon') { var ri = 25 * (o.escala || 1) * (NAT.w / 1100); return { x: o.x - ri, y: o.y - ri, w: ri * 2, h: ri * 2 }; }
     var s = (o.size || 40);
+    if (o.tipo === 'text') return { x: o.x, y: o.y - s * 0.8, w: s * 0.55 * String(o.texto || '').length, h: s };
     return { x: o.x - s, y: o.y - s, w: s * 2, h: s * 2 };
   }
 
   /* ---------------- selección y tamaño ---------------- */
-  function seleccionar(o) {
-    sel = o;
-    if (o && o.grupo) { grupoActivo = o.grupo; pintarTools(); }
-    render();
-  }
+  function seleccionar(o) { fijarSel(o ? [o] : []); }
 
   /* qué significa "tamaño" según el tipo de objeto */
   function rangoTam(o) {
@@ -1017,77 +1298,96 @@ U.sketch = (function () {
     aplicarTam(sel, v);
   }
 
-  /* barra horizontal al pie del mapa: aparece con algo seleccionado */
+  /* barra horizontal al pie del mapa: aparece con algo seleccionado.
+     Con uno: grupo, tamaño y giro. Con varios: grupo, duplicar y borrar. */
   function pintarBarraObj() {
     if (!barraObj) return;
     U.vaciar(barraObj);
-    if (!sel) { barraObj.classList.remove('on'); return; }
+    var lista = seleccionados();
+    if (!lista.length) { barraObj.classList.remove('on'); return; }
     barraObj.classList.add('on');
+    var uno = lista.length === 1 ? lista[0] : null;
 
-    /* el color de algo ya puesto se cambia acá, a propósito */
-    var quien = U.el('span', { class: 'quien', style: { '--c': colorDe(sel) } }, [U.el('i')]);
-    var selG = U.el('select', { class: 'inp sm grupo-sel', title: 'Cambiar el grupo de este objeto' });
+    /* el color de lo ya puesto se cambia acá, a propósito */
+    var mismo = lista.every(function (o) { return o.grupo === lista[0].grupo; }) ? lista[0].grupo : null;
+    var quien = U.el('span', { class: 'quien', style: { '--c': uno ? colorDe(uno) : (mismo ? colorDe(lista[0]) : '#9c8e6c') } }, [U.el('i')]);
+    var selG = U.el('select', { class: 'inp sm grupo-sel', title: 'Cambiar el color / escuadrón' });
+    if (!mismo) selG.appendChild(U.el('option', { value: '', text: lista.some(function (o) { return o.grupo; }) ? 'varios' : 'libre', selected: 'selected' }));
     gruposDibujables().forEach(function (gr) {
-      selG.appendChild(U.el('option', { value: gr.id, text: corto(gr), selected: sel.grupo === gr.id ? 'selected' : null }));
+      selG.appendChild(U.el('option', { value: gr.id, text: corto(gr), selected: mismo === gr.id ? 'selected' : null }));
     });
-    if (!sel.grupo) selG.appendChild(U.el('option', { value: '', text: 'libre', selected: 'selected' }));
+    selG.appendChild(U.el('option', { value: '__libre', text: 'Color libre elegido' }));
     selG.addEventListener('change', function () {
       if (!selG.value) return;
-      snapshot(); sel.grupo = selG.value; delete sel.color; renumerar(); U.save(); render();
+      snapshot();
+      lista.forEach(function (o) {
+        if (selG.value === '__libre') { o.color = colorLibre; delete o.grupo; }
+        else { o.grupo = selG.value; delete o.color; }
+      });
+      renumerar(); U.save(); render();
     });
     quien.appendChild(selG);
-    quien.appendChild(U.el('span', { text: '· ' + nombreTipo(sel) }));
+    quien.appendChild(U.el('span', { text: '· ' + (uno ? nombreTipo(uno) : lista.length + ' objetos') }));
     barraObj.appendChild(quien);
 
-    var r = rangoTam(sel);
-    barraObj.appendChild(U.el('span', { class: 'et', text: 'Tamaño' }));
-    var rng = U.el('input', { type: 'range', min: r.min, max: r.max, step: r.paso, value: valorTam(sel) });
-    var val = U.el('b', { text: valorTam(sel) + r.unidad });
-    rng.addEventListener('input', function () {
-      val.textContent = rng.value + r.unidad;
-      aplicarTamSinRepintar(sel, rng.value);
-    });
-    rng.addEventListener('change', function () { U.save(); render(); });
-    barraObj.appendChild(rng);
-    barraObj.appendChild(val);
-
-    if (rotable(sel)) {
-      barraObj.appendChild(U.el('span', { class: 'et', text: 'Giro' }));
-      var rot = U.el('input', { type: 'range', id: 'sk-rot', class: 'giro', min: 0, max: 359, step: 1, value: sel.rot || 0 });
-      var rv = U.el('b', { class: 'giro-v', text: (sel.rot || 0) + '°' });
-      var antes = false;
-      rot.addEventListener('input', function () {
-        if (!antes) { snapshot(); antes = true; }
-        sel.rot = Number(rot.value); rv.textContent = rot.value + '°';
-        repintarObj(sel);
+    if (uno) {
+      var r = rangoTam(uno), tomado = false;
+      barraObj.appendChild(U.el('span', { class: 'et', text: 'Tamaño' }));
+      var rng = U.el('input', { type: 'range', min: r.min, max: r.max, step: r.paso, value: valorTam(uno) });
+      var val = U.el('b', { text: valorTam(uno) + r.unidad });
+      rng.addEventListener('input', function () {
+        if (!tomado) { snapshot(); tomado = true; }
+        val.textContent = rng.value + r.unidad;
+        aplicarTamSinRepintar(uno, rng.value);
       });
-      rot.addEventListener('change', function () { antes = false; U.save(); });
-      barraObj.appendChild(rot);
-      barraObj.appendChild(rv);
+      rng.addEventListener('change', function () { tomado = false; U.save(); render(); });
+      barraObj.appendChild(rng);
+      barraObj.appendChild(val);
+
+      if (rotable(uno)) {
+        barraObj.appendChild(U.el('span', { class: 'et', text: 'Giro' }));
+        var rot = U.el('input', { type: 'range', id: 'sk-rot', class: 'giro', min: 0, max: 359, step: 1, value: uno.rot || 0 });
+        var rv = U.el('b', { class: 'giro-v', text: (uno.rot || 0) + '°' });
+        var antes = false;
+        rot.addEventListener('input', function () {
+          if (!antes) { snapshot(); antes = true; }
+          uno.rot = Number(rot.value); rv.textContent = rot.value + '°';
+          repintarObj(uno);
+        });
+        rot.addEventListener('change', function () { antes = false; U.save(); });
+        barraObj.appendChild(rot);
+        barraObj.appendChild(rv);
+      }
+    } else {
+      barraObj.appendChild(U.el('span', { class: 'et', text: 'Arrastrá cualquiera para mover todos · Shift+clic suma o saca' }));
     }
 
     barraObj.appendChild(U.el('button', {
       class: 'btn xs', text: '⧉', title: 'Duplicar',
       onclick: function () {
         snapshot();
-        var c = JSON.parse(JSON.stringify(sel));
-        c.id = U.uid('o');
-        if (c.x !== undefined) { c.x += 40; c.y += 40; }
-        if (c.pts) c.pts = c.pts.map(function (q) { return [q[0] + 40, q[1] + 40]; });
-        objs().push(c); renumerar(); sel = c; U.save(); render();
+        var copias = lista.map(function (o) {
+          var c = JSON.parse(JSON.stringify(o));
+          c.id = U.uid('o');
+          if (c.x !== undefined) { c.x += 40; c.y += 40; }
+          if (c.x2 !== undefined) { c.x2 += 40; c.y2 += 40; }
+          if (c.pts) c.pts = c.pts.map(function (q) { return [q[0] + 40, q[1] + 40]; });
+          objs().push(c);
+          return c;
+        });
+        renumerar(); U.save(); fijarSel(copias);
       }
     }));
     barraObj.appendChild(U.el('button', {
       class: 'btn xs', text: '↑', title: 'Traer al frente',
       onclick: function () {
         snapshot();
-        var i = objs().indexOf(sel);
-        if (i >= 0) { objs().splice(i, 1); objs().push(sel); }
+        slide().objs = objs().filter(function (o) { return lista.indexOf(o) < 0; }).concat(lista);
         U.save(); render();
       }
     }));
     barraObj.appendChild(U.el('button', {
-      class: 'btn xs danger', text: '✕ Borrar', onclick: function () { borrar(sel); }
+      class: 'btn xs danger', text: '✕ Borrar', onclick: borrarSel
     }));
   }
   /* mientras movés el slider no queremos repintar todo el panel */
@@ -1105,7 +1405,7 @@ U.sketch = (function () {
   }
   function nombreTipo(o) {
     if (o.tipo === 'icon') { var ic = U.icono(o.icono); return ic ? ic.nombre : 'ícono'; }
-    return ({ pen: 'trazo', line: 'flecha', rect: 'zona', poly: 'zona', circle: 'radio', text: 'texto', pin: 'captura' })[o.tipo] || o.tipo;
+    return ({ pen: 'trazo', line: 'línea', rect: 'forma', poly: 'zona', circle: 'radio', text: 'texto', pin: 'captura' })[o.tipo] || o.tipo;
   }
 
   /* datos de la partida, centrados arriba del mapa */
@@ -1214,7 +1514,7 @@ U.sketch = (function () {
     s.slides.forEach(function (sl, i) {
       slidesBar.appendChild(U.el('button', {
         class: 'sk-slide' + (i === s.activa ? ' on' : ''),
-        onclick: function () { s.activa = i; sel = null; U.save(); render(); },
+        onclick: function () { s.activa = i; limpiarSel(); U.save(); pintarTools(); render(); },
         ondblclick: function () {
           U.pedirTexto('Nombre de la slide', sl.nombre, function (n) {
             if (n) { sl.nombre = n; U.save(); pintarSlides(); }
@@ -1391,7 +1691,7 @@ U.sketch = (function () {
     render: function () { if (svg) render(); },
     recargarMapa: function () {
       if (!svg) return;
-      historia = {}; futuro = {}; sel = null;
+      historia = {}; futuro = {}; limpiarSel();
       if (!hay()) { vacio(); return; }
       cargarMapa(); pintarTools(); render();
     }
