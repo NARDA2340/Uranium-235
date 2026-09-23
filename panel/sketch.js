@@ -262,8 +262,7 @@ U.sketch = (function () {
 
   /* ---------------- barra de herramientas ---------------- */
   var TOOLS = [
-    { id: 'sel', ico: '➚', t: 'Seleccionar · V — arrastrá en el vacío para agarrar varios, arrastrá un objeto para moverlo, doble clic para editar' },
-    { id: 'mano', ico: '✋', t: 'Mover el mapa · H (o mantené Espacio)' },
+    { id: 'sel', ico: '<svg viewBox="0 0 24 24" width="1.05em" height="1.05em"><path d="M6 2.5v17l4.3-4.1 3 6.3 2.6-1.2-3-6.2 5.9-.3z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>', t: 'Seleccionar · V — arrastrá en el vacío para agarrar varios, arrastrá un objeto para moverlo, doble clic para editar' },
     { id: 'pen', ico: '✎', t: 'Trazo libre · P' },
     { id: 'line', ico: '↗', t: 'Línea / flecha · L' },
     { id: 'rect', ico: '▭', t: 'Formas · R — rectángulo, cuadrado, elipse, círculo, triángulo, rombo' },
@@ -657,7 +656,7 @@ U.sketch = (function () {
         if (!espacio) { espacio = true; marcoMapa.classList.add('mano'); }
         return;
       }
-      var mapa = { v: 'sel', h: 'mano', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
+      var mapa = { v: 'sel', p: 'pen', l: 'line', r: 'rect', g: 'poly', c: 'circle', i: 'icon', t: 'text', s: 'pin' };
       var k = e.key.toLowerCase();
       if (mapa[k]) { terminar(); tool = mapa[k]; pintarTools(); render(); }
       if (e.key === '+' || e.key === '=') zoomA(vista.z * 1.4);
@@ -723,7 +722,7 @@ U.sketch = (function () {
       return;
     }
 
-    if (e.button === 1 || e.button === 2 || espacio || tool === 'mano') { empezarPaneo(e, false); return; }
+    if (e.button === 1 || e.button === 2 || espacio) { empezarPaneo(e, false); return; }
     if (e.button !== 0) return;
 
     if (tool === 'del') { if (obj) borrar(obj); else empezarPaneo(e, false); return; }

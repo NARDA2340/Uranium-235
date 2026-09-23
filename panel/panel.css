@@ -786,3 +786,7 @@ textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:v
 .sk-svg[data-tool="mano"]{cursor:grab}
 .sk-marco.mano .sk-svg,.sk-marco.mano .sk-svg .ob{cursor:grab}
 .sk-marco.paneando .sk-svg{cursor:grabbing}
+
+/* los paneles laterales se deslizan: el contenido no se aplasta */
+.sk-tools,.sk-leyenda{overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+.sk-tools>*,.sk-leyenda>*{flex-shrink:0}
