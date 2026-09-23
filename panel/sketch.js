@@ -125,14 +125,14 @@ U.sketch = (function () {
     var id = slide().id, h = historia[id] || [];
     if (!h.length) { U.toast('Nada para deshacer'); return; }
     (futuro[id] = futuro[id] || []).push(JSON.stringify(objs()));
-    slide().objs = JSON.parse(h.pop());
+    U.setObjs(id, JSON.parse(h.pop()));
     limpiarSel(); U.save(); pintarTools(); render();
   }
   function rehacer() {
     var id = slide().id, f = futuro[id] || [];
     if (!f.length) return;
     (historia[id] = historia[id] || []).push(JSON.stringify(objs()));
-    slide().objs = JSON.parse(f.pop());
+    U.setObjs(id, JSON.parse(f.pop()));
     limpiarSel(); U.save(); pintarTools(); render();
   }
 
@@ -739,7 +739,7 @@ U.sketch = (function () {
         return;
       }
       if (tool === 'sel') {
-        dibujando = { modo: 'caja', a: p, b: p, sx: e.clientX, sy: e.clientY, sumar: e.shiftKey };
+        dibujando = { modo: 'caja', a: alMapa(p), b: alMapa(p), sx: e.clientX, sy: e.clientY, sumar: e.shiftKey };
         return;
       }
       dibujando = { modo: 'colocar', p: p, sx: e.clientX, sy: e.clientY, e: e };
@@ -795,11 +795,34 @@ U.sketch = (function () {
     fijarSel(l);
   }
 
+  /* Borrar solo saca objetos del mapa: nunca bloques ni asignaciones.
+     Con más de LIMITE_SIN_CONFIRMAR se pide confirmación con el número. */
+  var LIMITE_SIN_CONFIRMAR = 5;
   function borrarSel() {
     var l = seleccionados(); if (!l.length) return;
+    if (l.length > LIMITE_SIN_CONFIRMAR) {
+      U.confirmar('Se van a borrar ' + l.length + ' objetos del mapa.', function () { quitarObjs(l); });
+      return;
+    }
+    quitarObjs(l);
+  }
+  function quitarObjs(l) {
+    var antes = huellaRoster();
     snapshot();
-    slide().objs = objs().filter(function (o) { return l.indexOf(o) < 0; });
+    U.setObjs(slide().id, objs().filter(function (o) { return l.indexOf(o) < 0; }));
     renumerar(); limpiarSel(); U.save(); pintarTools(); render();
+    U.toast((l.length === 1 ? 'Se borró 1 objeto' : 'Se borraron ' + l.length + ' objetos') + ' · Ctrl+Z para deshacer');
+    U.assert(huellaRoster() === antes, 'borrar en el mapa cambió el roster');
+  }
+  /* invariante: nada de Estrategia cambia la cantidad de bloques ni de asignaciones */
+  function huellaRoster() {
+    var p = P();
+    return U.bloques().length + '|' + (p ? Object.keys(p.asignaciones || {}).length : 0);
+  }
+
+  /* la caja de selección no sale del espacio del mapa */
+  function alMapa(pt) {
+    return { x: Math.max(0, Math.min(NAT.w, pt.x)), y: Math.max(0, Math.min(NAT.h, pt.y)) };
   }
 
   function empezarPaneo(e, esClic) {
@@ -845,7 +868,7 @@ U.sketch = (function () {
       });
     }
     else if (d.modo === 'caja') {
-      d.b = p;
+      d.b = alMapa(p);
       var px = 1 / (escalaPantalla() || 1), r = cajaDe(d.a, d.b);
       U.vaciar(gTmp);
       gTmp.appendChild(ns('rect', {
@@ -963,13 +986,7 @@ U.sketch = (function () {
     });
   }
 
-  function borrar(o) {
-    snapshot();
-    var i = objs().indexOf(o);
-    if (i >= 0) objs().splice(i, 1);
-    renumerar();
-    limpiarSel(); U.save(); pintarTools(); render();
-  }
+  function borrar(o) { if (objs().indexOf(o) >= 0) quitarObjs([o]); }
 
   /* Agrega una captura al mapa. El pin se crea apenas tenemos la imagen;
      guardarla en IndexedDB o en la nube es aparte y no puede frenar nada. */
@@ -1381,7 +1398,7 @@ U.sketch = (function () {
       class: 'btn xs', text: '↑', title: 'Traer al frente',
       onclick: function () {
         snapshot();
-        slide().objs = objs().filter(function (o) { return lista.indexOf(o) < 0; }).concat(lista);
+        U.setObjs(slide().id, objs().filter(function (o) { return lista.indexOf(o) < 0; }).concat(lista));
         U.save(); render();
       }
     }));

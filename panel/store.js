@@ -8,6 +8,12 @@ window.U = window.U || {};
 
 U.KEY = 'u235.panel.v1';
 
+/* modo desarrollo: localhost o ?dev en la URL. Solo prende asserts. */
+U.DEV = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || /[?&]dev\b/.test(location.search);
+U.assert = function (cond, msg) {
+  if (U.DEV && !cond) console.error('[assert] ' + msg);
+};
+
 U.uid = function (p) { return (p || 'x') + Math.random().toString(36).slice(2, 9); };
 
 /* ---------- partida vacía ---------- */
@@ -284,6 +290,18 @@ U.cambiarFormato = function (formato) {
   });
   p.asignaciones = nuevas;
   U.save(); U.emit('roster'); U.emit('todo');
+};
+
+/* ---------- objetos del mapa ----------
+   La única escritura de sl.objs. El mapa puede reemplazar sus objetos,
+   nunca tocar bloques ni asignaciones. */
+U.setObjs = function (slideId, lista) {
+  var p = U.partida();
+  if (!p || !p.strat || !Array.isArray(lista)) return false;
+  var sl = p.strat.slides.find(function (x) { return x.id === slideId; });
+  if (!sl) return false;
+  sl.objs = lista;
+  return true;
 };
 
 /* ---------- rellenar la infantería que falta ----------
