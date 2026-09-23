@@ -43,7 +43,7 @@ U.sketch = (function () {
     { id: 'elipse', t: 'Elipse', real: 'elipse' }, { id: 'circulo', t: 'Círculo', real: 'elipse', fija: true },
     { id: 'tri', t: 'Triángulo', real: 'tri' }, { id: 'rombo', t: 'Rombo', real: 'rombo' }
   ];
-  var historia = {}, futuro = {};
+  var historia = {}, futuro = {}, claveHistoria = '';
 
   /* ---------------- helpers ---------------- */
   function P() { return U.partida(); }
@@ -1720,7 +1720,11 @@ U.sketch = (function () {
     render: function () { if (svg) render(); },
     recargarMapa: function () {
       if (!svg) return;
-      historia = {}; futuro = {}; limpiarSel();
+      // el historial se vacía solo si cambió la partida activa o su mapa:
+      // una sincro, un import o un cambio de formato no pueden tirar el Ctrl+Z
+      var p = P(), clave = p ? p.id + '|' + (p.strat && p.strat.mapa) : '';
+      if (clave !== claveHistoria) { historia = {}; futuro = {}; claveHistoria = clave; }
+      limpiarSel();
       if (!hay()) { vacio(); return; }
       cargarMapa(); pintarTools(); render();
     }
