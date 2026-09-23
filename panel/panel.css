@@ -336,6 +336,8 @@ textarea.ta{min-height:180px;font-family:var(--f-mono);font-size:12.5px;resize:v
 .ley-vacio{font-family:var(--f-mono);font-size:11px;color:var(--tan-dim);line-height:1.6}
 .ley-grupo{border:1px solid var(--line-dim);border-left:3px solid var(--c);background:var(--surface)}
 .ley-grupo.on{background:color-mix(in srgb,var(--c) 14%,var(--surface));border-color:var(--c)}
+.ley-grupo.sin-mapa{opacity:.55}
+.ley-grupo.sin-mapa:hover,.ley-grupo.sin-mapa.on{opacity:1}
 .ley-t{
   display:grid;grid-template-columns:10px 1fr auto;gap:7px;align-items:center;padding:6px 8px;cursor:pointer;
   font-family:var(--f-display);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--tan);

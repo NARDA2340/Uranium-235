@@ -1421,7 +1421,11 @@ U.sketch = (function () {
   }
 
   /* ---------------- leyenda ---------------- */
-  var verTodos = false;
+  /* Por defecto se listan TODOS los grupos con gente o con algo en el
+     mapa: borrar los dibujos de una escuadra no puede hacerla desaparecer
+     de acá, porque se ve igual que haber perdido el roster. "Solo en el
+     mapa" es opt-in y se recuerda en state.ui. */
+  function soloMapa() { return !!(U.state.ui && U.state.ui.leySoloMapa); }
   function pintarLeyenda() {
     U.vaciar(leyenda);
     var usados = {};
@@ -1430,21 +1434,30 @@ U.sketch = (function () {
     leyenda.appendChild(U.el('div', { class: 'ley-head' }, [
       U.el('h3', { text: 'Quién va dónde' }),
       U.el('button', {
-        class: 'chip' + (verTodos ? ' on' : ''), text: verTodos ? 'Todos' : 'En el mapa',
-        onclick: function () { verTodos = !verTodos; pintarLeyenda(); }
+        class: 'chip' + (soloMapa() ? ' on' : ''), text: soloMapa() ? 'Solo en el mapa' : 'Todos',
+        title: soloMapa() ? 'Mostrar todos los grupos del roster' : 'Mostrar solo los grupos que tienen algo dibujado',
+        onclick: function () { U.state.ui.leySoloMapa = !soloMapa(); U.save(); pintarLeyenda(); }
       })
     ]));
 
     var grupos = U.bloques().filter(function (g) {
-      return verTodos ? U.plantel(g.id).length : usados[g.id];
+      return soloMapa() ? usados[g.id] : (usados[g.id] || U.plantel(g.id).length);
     });
     if (!grupos.length) {
-      leyenda.appendChild(U.el('p', { class: 'ley-vacio', text: 'Dibujá con el color de un grupo y acá aparecen sus jugadores.' }));
+      leyenda.appendChild(U.el('p', {
+        class: 'ley-vacio',
+        text: soloMapa()
+          ? 'Ningún grupo tiene nada dibujado en esta slide. El roster sigue intacto: tocá "Solo en el mapa" para verlo entero.'
+          : 'Todavía no hay jugadores asignados en el Roster.'
+      }));
     }
 
     grupos.forEach(function (g) {
       var u = U.unit(g.unidad), pl = U.plantel(g.id);
-      var caja = U.el('div', { class: 'ley-grupo' + (grupoActivo === g.id ? ' on' : ''), style: { '--c': u.color } });
+      var caja = U.el('div', {
+        class: 'ley-grupo' + (grupoActivo === g.id ? ' on' : '') + (usados[g.id] ? '' : ' sin-mapa'),
+        style: { '--c': u.color }
+      });
       var oculto = !!ocultos()[g.id];
       var t = U.el('div', { class: 'ley-t' + (oculto ? ' apagada' : '') });
       t.appendChild(U.el('button', {
