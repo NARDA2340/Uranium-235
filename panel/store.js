@@ -136,6 +136,9 @@ U.migrar = function () {
       if (!a) return;
       if (a.est === undefined) { a.est = a.ok ? 'ok' : ''; delete a.ok; }
     });
+    // objetos del mapa apuntando a un bloque borrado: estado corrupto
+    var huerfanos = U.limpiarGruposHuerfanos(p);
+    if (huerfanos) console.warn('partida ' + p.id + ': ' + huerfanos + ' objetos del mapa apuntaban a un bloque inexistente');
   });
   if (!U.state.activa || !U.partida()) U.state.activa = U.state.partidas[0] && U.state.partidas[0].id;
 };
@@ -259,12 +262,37 @@ U.cambiarRol = function (gid, i, rol) {
   b.slots[i] = rol; U.save(); U.emit('roster');
 };
 U.borrarBloque = function (id) {
-  var p = U.partida();
-  p.bloques = p.bloques.filter(function (b) { return b.id !== id; });
+  var p = U.partida(); if (!p) return;
+  var b = U.bloque(id); if (!b) return;
+  p.bloques = p.bloques.filter(function (x) { return x.id !== id; });
   Object.keys(p.asignaciones).forEach(function (k) {
     if (k.split(':')[0] === id) delete p.asignaciones[k];
   });
-  U.save(); U.emit('roster');
+  // cascada roster -> mapa: los dibujos del bloque quedan como color libre
+  // con el mismo color, en vez de apuntar a un grupo que ya no existe
+  U.limpiarGruposHuerfanos(p, U.unit(b.unidad).color);
+  U.save(); U.emit('roster'); U.emit('strat');
+};
+
+/* Saca o.grupo de los objetos del mapa cuyo bloque ya no existe en la
+   partida. Si se pasa un color, el objeto lo conserva como color libre.
+   Devuelve cuántos objetos corrigió. */
+U.limpiarGruposHuerfanos = function (p, color) {
+  if (!p || !p.strat || !p.strat.slides) return 0;
+  var existe = {}, n = 0;
+  (p.bloques || []).forEach(function (b) { existe[b.id] = true; });
+  p.strat.slides.forEach(function (sl) {
+    (sl.objs || []).forEach(function (o) {
+      if (!o || !o.grupo || existe[o.grupo]) return;
+      delete o.grupo; delete o.num;
+      if (color) o.color = color;
+      n++;
+    });
+  });
+  if (p.strat.ocultos) Object.keys(p.strat.ocultos).forEach(function (g) {
+    if (!existe[g]) delete p.strat.ocultos[g];
+  });
+  return n;
 };
 U.agregarBloque = function (base) {
   var p = U.partida();
@@ -289,6 +317,9 @@ U.cambiarFormato = function (formato) {
     if (b && b.slots[+parte[1]]) nuevas[k] = p.asignaciones[k];
   });
   p.asignaciones = nuevas;
+  // cascada roster -> mapa: los bloques que no están en el formato nuevo
+  // no pueden dejar objetos apuntándoles
+  U.limpiarGruposHuerfanos(p);
   U.save(); U.emit('roster'); U.emit('todo');
 };
 
